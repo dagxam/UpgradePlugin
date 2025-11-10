@@ -28,6 +28,7 @@ public class AnvilListener implements Listener {
 
     @EventHandler
     public void onAnvilPrepare(PrepareAnvilEvent event) {
+        // Мы снова будем использовать 'inventory' для setRepairCost
         AnvilInventory inventory = event.getInventory();
         ItemStack firstItem = inventory.getItem(0); 
         ItemStack secondItem = inventory.getItem(1); 
@@ -44,9 +45,8 @@ public class AnvilListener implements Listener {
         
         List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
         
-        // Проверка, улучшен ли предмет (чтобы не улучшать дважды)
         if (lore.contains("§b[Улучшено]")) {
-             event.setResult(null); // Запрещаем улучшение
+             event.setResult(null);
              return;
         }
 
@@ -146,7 +146,9 @@ public class AnvilListener implements Listener {
 
             event.setResult(resultItem);
             
-            event.setRepairCost(20);
+            // ИСПРАВЛЕНО: Мы ВОЗВРАЩАЕМ этот код. 
+            // Это правильно, хоть и "устарело".
+            inventory.setRepairCost(20);
         }
     }
 
@@ -169,4 +171,4 @@ public class AnvilListener implements Listener {
         if (name.endsWith("_BOOTS")) return EquipmentSlot.FEET;
         return null;
     }
-} // <-- УБЕДИТЕСЬ, ЧТО ЭТА СКОБКА НА МЕСТЕ!
+}
