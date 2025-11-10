@@ -1,0 +1,17 @@
+name: UpgradePlugin
+version: 1.0
+author: dagxam
+# ИЗМЕНЕНО
+main: ru.dagxam.upgradeplugin.UpgradePlugin
+api-version: '1.21'
+
+commands:
+  giveupgradebook:
+    description: Выдает Книгу Улучшения.
+    usage: /<command>
+    permission: upgradeplugin.givebook
+
+permissions:
+  upgradeplugin.givebook:
+    description: Дает право на использование команды /giveupgradebook.
+    default: op
