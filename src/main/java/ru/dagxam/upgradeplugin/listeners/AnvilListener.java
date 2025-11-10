@@ -16,7 +16,6 @@ import ru.dagxam.upgradeplugin.UpgradePlugin;
 import ru.dagxam.upgradeplugin.items.ItemManager;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -58,20 +57,23 @@ public class AnvilListener implements Listener {
 
         // Кожа
         if (type.name().startsWith("LEATHER_")) {
-            applyArmorBonus(meta, getSlot(type), 2.0, 4.0, 0, 0); // +2 брони, +2 сердца
+            // +2 брони, +2 сердца (4.0)
+            applyArmorBonus(meta, getSlot(type), 2.0, 4.0, 0, 0); 
             applyDurability(meta, 2);
             success = true;
         }
         // Кольчуга
         else if (type.name().startsWith("CHAINMAIL_")) {
-            applyArmorBonus(meta, getSlot(type), 4.0, 8.0, 0, 0); // +4 брони, +4 сердца
+            // +4 брони, +4 сердца (8.0)
+            applyArmorBonus(meta, getSlot(type), 4.0, 8.0, 0, 0); 
             applyDurability(meta, 4);
             success = true;
         }
         // Железо
         else if (type.name().startsWith("IRON_")) {
             if (getSlot(type) != null) { // Броня
-                applyArmorBonus(meta, getSlot(type), 6.0, 12.0, 0, 0); // +6 брони, +6 сердец
+                // +6 брони, +6 сердец (12.0)
+                applyArmorBonus(meta, getSlot(type), 6.0, 12.0, 0, 0); 
                 applyDurability(meta, 6);
                 success = true;
             } else { // Инструменты/Оружие
@@ -82,7 +84,8 @@ public class AnvilListener implements Listener {
         // Золото
         else if (type.name().startsWith("GOLDEN_")) {
             if (getSlot(type) != null) { // Броня
-                applyArmorBonus(meta, getSlot(type), 7.0, 14.0, 0, 0); // +7 брони, +7 сердец
+                // +7 брони, +7 сердец (14.0)
+                applyArmorBonus(meta, getSlot(type), 7.0, 14.0, 0, 0);
                 applyDurability(meta, 7);
                 success = true;
             } else { // Инструменты/Оружие
@@ -93,7 +96,8 @@ public class AnvilListener implements Listener {
         // Алмазы
         else if (type.name().startsWith("DIAMOND_")) {
             if (getSlot(type) != null) { // Броня
-                applyArmorBonus(meta, getSlot(type), 10.0, 20.0, 10.0, 0); // +10 брони, +10 сердец, +10 твердости
+                // +10 брони, +10 сердец (20.0), +10 твердости
+                applyArmorBonus(meta, getSlot(type), 10.0, 20.0, 10.0, 0); 
                 applyDurability(meta, 10);
                 success = true;
             } else { // Инструменты/Оружие
@@ -104,7 +108,7 @@ public class AnvilListener implements Listener {
         // Незерит
         else if (type.name().startsWith("NETHERITE_")) {
             if (getSlot(type) != null) { // Броня
-                // +15 брони, +15 сердец, +15 твердости, +1.5 (150%) сопр. отбрасыванию
+                // +15 брони, +15 сердец (30.0), +15 твердости, +1.5 (150%) сопр. отбрасыванию
                 applyArmorBonus(meta, getSlot(type), 15.0, 30.0, 15.0, 1.5); 
                 applyDurability(meta, 15);
                 success = true;
@@ -133,70 +137,91 @@ public class AnvilListener implements Listener {
 
             event.setResult(resultItem);
             
-            // Этот метод "устарел", но он единственно верный
             inventory.setRepairCost(20);
         }
     }
 
     /**
-     * ПРАВИЛЬНЫЙ метод для добавления бонусов ОРУЖИЮ.
+     * ПРАВИЛЬНЫЙ метод для добавления бонусов ОРУЖИЮ и ИНСТРУМЕНТАМ.
      * Он находит существующие бонусы, добавляет к ним наши значения и заменяет их.
      */
     private void applyWeaponBonus(ItemMeta meta, double damageBonus, double speedBonus) {
-        // Получаем все существующие модификаторы
         Multimap<Attribute, AttributeModifier> modifiers = meta.getAttributeModifiers();
         
         // 1. Рассчитываем новый УРОН
-        double newDamage = damageBonus + 1.0; // +1.0 - это базовый урон игрока
+        // Урон = (База игрока 1.0) + (Модификатор)
+        double newDamage = damageBonus; // Наш бонус
         if (modifiers != null && modifiers.containsKey(Attribute.GENERIC_ATTACK_DAMAGE)) {
             for (AttributeModifier mod : modifiers.get(Attribute.GENERIC_ATTACK_DAMAGE)) {
                 newDamage += mod.getAmount(); // Добавляем ванильный урон (например, +7 у незерита)
             }
         }
-        // Удаляем ВСЕ старые модификаторы урона
         meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
-        // Добавляем один, но уже с финальным значением (минус база игрока)
         meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, 
-            new AttributeModifier(UUID.randomUUID(), "UpgradeDamage", newDamage - 1.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
+            new AttributeModifier(UUID.randomUUID(), "UpgradeDamage", newDamage, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
 
         // 2. Рассчитываем новую СКОРОСТЬ АТАКИ
-        // Базовая скорость = 4.0. Ванильный меч (1.6) имеет модификатор -2.4
-        double newSpeed = 4.0 + speedBonus; // Начинаем с базы 4.0
+        // Скорость = (База 4.0) + (Модификатор)
+        double newSpeed = speedBonus; // Наш бонус
         if (modifiers != null && modifiers.containsKey(Attribute.GENERIC_ATTACK_SPEED)) {
              for (AttributeModifier mod : modifiers.get(Attribute.GENERIC_ATTACK_SPEED)) {
                 newSpeed += mod.getAmount(); // Добавляем ванильный модификатор (например, -2.4)
             }
         }
-        // Удаляем ВСЕ старые модификаторы скорости
         meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
-        // Добавляем один, но уже с финальным значением (минус база 4.0)
          meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, 
-            new AttributeModifier(UUID.randomUUID(), "UpgradeAtkSpeed", newSpeed - 4.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
+            new AttributeModifier(UUID.randomUUID(), "UpgradeAtkSpeed", newSpeed, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND));
     }
 
     /**
-     * ПРАВИЛЬНЫЙ метод для добавления бонусов БРОНЕ.
-     * (Логика та же, что и с оружием, но для других атрибутов)
+     * ИСПРАВЛЕННЫЙ метод для добавления бонусов БРОНЕ.
+     * Теперь он тоже суммирует броню, твердость и сопр. отбрасыванию.
      */
     private void applyArmorBonus(ItemMeta meta, EquipmentSlot slot, double armorBonus, double healthBonus, double toughnessBonus, double knockbackBonus) {
-        // Мы не можем легко получить "стандартное" значение брони, так как оно хранится по-другому.
-        // Для брони мы просто ДОБАВЛЯЕМ модификаторы, так как они обычно не конфликтуют.
-        
-        if (armorBonus > 0)
+        Multimap<Attribute, AttributeModifier> modifiers = meta.getAttributeModifiers();
+
+        // 1. Рассчитываем новую БРОНЮ
+        double newArmor = armorBonus;
+        if (modifiers != null && modifiers.containsKey(Attribute.GENERIC_ARMOR)) {
+            for (AttributeModifier mod : modifiers.get(Attribute.GENERIC_ARMOR)) {
+                newArmor += mod.getAmount(); // Добавляем ванильное значение
+            }
+        }
+        meta.removeAttributeModifier(Attribute.GENERIC_ARMOR);
+        if (newArmor != 0) // Не добавляем, если в итоге 0
             meta.addAttributeModifier(Attribute.GENERIC_ARMOR, 
-                new AttributeModifier(UUID.randomUUID(), "UpgradeArmor", armorBonus, AttributeModifier.Operation.ADD_NUMBER, slot));
-        
-        if (healthBonus > 0)
+                new AttributeModifier(UUID.randomUUID(), "UpgradeArmor", newArmor, AttributeModifier.Operation.ADD_NUMBER, slot));
+
+        // 2. Рассчитываем новую ТВЕРДОСТЬ БРОНИ
+        double newToughness = toughnessBonus;
+        if (modifiers != null && modifiers.containsKey(Attribute.GENERIC_ARMOR_TOUGHNESS)) {
+            for (AttributeModifier mod : modifiers.get(Attribute.GENERIC_ARMOR_TOUGHNESS)) {
+                newToughness += mod.getAmount(); // Добавляем ванильное значение
+            }
+        }
+        meta.removeAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS);
+        if (newToughness != 0)
+            meta.addAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS, 
+                new AttributeModifier(UUID.randomUUID(), "UpgradeToughness", newToughness, AttributeModifier.Operation.ADD_NUMBER, slot));
+
+        // 3. Рассчитываем новое СОПРОТИВЛЕНИЕ ОТБРАСЫВАНИЮ
+        double newKnockback = knockbackBonus;
+         if (modifiers != null && modifiers.containsKey(Attribute.GENERIC_KNOCKBACK_RESISTANCE)) {
+            for (AttributeModifier mod : modifiers.get(Attribute.GENERIC_KNOCKBACK_RESISTANCE)) {
+                newKnockback += mod.getAmount(); // Добавляем ванильное значение
+            }
+        }
+        meta.removeAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE);
+        if (newKnockback != 0)
+            meta.addAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE, 
+                new AttributeModifier(UUID.randomUUID(), "UpgradeKnockback", newKnockback, AttributeModifier.Operation.ADD_NUMBER, slot));
+
+
+        // 4. ЗДОРОВЬЕ - всегда просто добавляется поверх всего, не заменяется
+        if (healthBonus > 0) {
             meta.addAttributeModifier(Attribute.GENERIC_MAX_HEALTH, 
                 new AttributeModifier(UUID.randomUUID(), "UpgradeHealth", healthBonus, AttributeModifier.Operation.ADD_NUMBER, slot));
-        
-        if (toughnessBonus > 0)
-            meta.addAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS, 
-                new AttributeModifier(UUID.randomUUID(), "UpgradeToughness", toughnessBonus, AttributeModifier.Operation.ADD_NUMBER, slot));
-        
-        if (knockbackBonus > 0)
-            meta.addAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE, 
-                new AttributeModifier(UUID.randomUUID(), "UpgradeKnockback", knockbackBonus, AttributeModifier.Operation.ADD_NUMBER, slot));
+        }
     }
 
     private void applyDurability(ItemMeta meta, int level) {
