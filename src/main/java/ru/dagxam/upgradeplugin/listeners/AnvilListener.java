@@ -1,7 +1,10 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-import com.google.common.collect.Multimap;
-import org.bukkit.ChatColor;
+// НОВЫЕ ИМПОРТЫ ДЛЯ РАБОТЫ С ТЕКСТОМ В PAPER
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+// ---------------------------------------------
+
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -53,18 +56,19 @@ public class AnvilListener implements Listener {
         Material type = resultItem.getType();
         boolean success = false;
         
-        String displayName = meta.hasDisplayName() ? ChatColor.stripColor(meta.getDisplayName()) : "";
+        // --- ИСПРАВЛЕННАЯ ЛОГИКА ПОЛУЧЕНИЯ ИМЕНИ ---
+        // Эта строка получает ЛЮБОЕ имя (стандартное или пользовательское)
+        String displayName = PlainTextComponentSerializer.plainText().serialize(meta.displayName());
+        // -----------------------------------------
 
         // --- ЛОГИКА УЛУЧШЕНИЯ ---
 
-        // --- ПРОВЕРКА МЕДНЫХ ПРЕДМЕТОВ (ПО НАЗВАНИЮ) ---
         // (Медная броня по вашему запросу)
         if (displayName.equalsIgnoreCase("Медная кираса") || displayName.equalsIgnoreCase("Copper Chestplate") ||
             displayName.equalsIgnoreCase("Медный шлем") || displayName.equalsIgnoreCase("Copper Helmet") ||
             displayName.equalsIgnoreCase("Медные поножи") || displayName.equalsIgnoreCase("Copper Leggings") ||
             displayName.equalsIgnoreCase("Медные ботинки") || displayName.equalsIgnoreCase("Copper Boots")) 
         {
-            // +3 брони, +3 сердца (6.0)
             applyArmorBonus(meta, type, getSlot(type), 3.0, 6.0, 0, 0, displayName); 
             applyDurability(meta, 3);
             success = true;
@@ -73,12 +77,12 @@ public class AnvilListener implements Listener {
         else if (displayName.equalsIgnoreCase("Медная кирка") || displayName.equalsIgnoreCase("Copper Pickaxe") ||
                  displayName.equalsIgnoreCase("Медный топор") || displayName.equalsIgnoreCase("Copper Axe") ||
                  displayName.equalsIgnoreCase("Медная лопата") || displayName.equalsIgnoreCase("Copper Shovel") ||
-                 displayName.equalsIgnoreCase("Медная мотыга") || displayName.equalsIgnoreCase("Copper Hoe")) 
+                 displayName.equalsIgnoreCase("Медная мотыга") || displayName.equalsIgnoreCase("Copper Hoe") ||
+                 displayName.equalsIgnoreCase("Медный меч") || displayName.equalsIgnoreCase("Copper Sword")) // Добавил Медный меч на всякий случай
         {
-            // +6 урон, +6 скорость
             applyWeaponBonus(meta, type, 6.0, 6.0, displayName); 
             if (displayName.equalsIgnoreCase("Медная кирка") || displayName.equalsIgnoreCase("Copper Pickaxe")) {
-                meta.addEnchant(Enchantment.EFFICIENCY, 12, true); // "8 ударов"
+                meta.addEnchant(Enchantment.EFFICIENCY, 12, true);
             }
             success = true;
         }
@@ -215,4 +219,152 @@ public class AnvilListener implements Listener {
 
         meta.removeAttributeModifier(Attribute.GENERIC_ARMOR);
         meta.removeAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS);
-        meta.
+        meta.removeAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE);
+        
+        if (newArmor > 0)
+            meta.addAttributeModifier(Attribute.GENERIC_ARMOR, 
+                new AttributeModifier(UUID.randomUUID(), "UpgradeArmor", newArmor, AttributeModifier.Operation.ADD_NUMBER, slot));
+        
+        if (newToughness > 0)
+            meta.addAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS, 
+                new AttributeModifier(UUID.randomUUID(), "UpgradeToughness", newToughness, AttributeModifier.Operation.ADD_NUMBER, slot));
+        
+        if (newKnockback > 0)
+            meta.addAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE, 
+                new AttributeModifier(UUID.randomUUID(), "UpgradeKnockback", newKnockback, AttributeModifier.Operation.ADD_NUMBER, slot));
+        
+        if (healthBonus > 0) {
+            meta.addAttributeModifier(Attribute.GENERIC_MAX_HEALTH, 
+                new AttributeModifier(UUID.randomUUID(), "UpgradeHealth", healthBonus, AttributeModifier.Operation.ADD_NUMBER, slot));
+        }
+    }
+
+    /**
+     * "Жестко закодированная" база данных ванильных И кастомных статов.
+     * (Включает статы для Медных предметов, определяемых по имени)
+     */
+    private double getVanillaAttribute(Material type, Attribute attribute, String displayName) {
+        String name = type.name();
+
+        // --- ПРОВЕРКА МЕДНЫХ ПРЕДМЕТОВ ПО ИМЕНИ ---
+        if (attribute == Attribute.GENERIC_ATTACK_DAMAGE) {
+            if (displayName.equalsIgnoreCase("Медная кирка") || displayName.equalsIgnoreCase("Copper Pickaxe")) return 2.0; // 1+2=3
+            if (displayName.equalsIgnoreCase("Медный топор") || displayName.equalsIgnoreCase("Copper Axe")) return 7.0; // 1+7=8
+            if (displayName.equalsIgnoreCase("Медная лопата") || displayName.equalsIgnoreCase("Copper Shovel")) return 2.5; // 1+2.5=3.5
+            if (displayName.equalsIgnoreCase("Медная мотыга") || displayName.equalsIgnoreCase("Copper Hoe")) return 0.0; // 1+0=1
+            if (displayName.equalsIgnoreCase("Медный меч") || displayName.equalsIgnoreCase("Copper Sword")) return 4.0; // 1+4=5
+        }
+        if (attribute == Attribute.GENERIC_ATTACK_SPEED) {
+            if (displayName.equalsIgnoreCase("Медная кирка") || displayName.equalsIgnoreCase("Copper Pickaxe")) return -2.8; // 1.2
+            if (displayName.equalsIgnoreCase("Медный топор") || displayName.equalsIgnoreCase("Copper Axe")) return -3.2; // 0.8
+            if (displayName.equalsIgnoreCase("Медная лопата") || displayName.equalsIgnoreCase("Copper Shovel")) return -3.0; // 1.0
+            if (displayName.equalsIgnoreCase("Медная мотыга") || displayName.equalsIgnoreCase("Copper Hoe")) return -3.0; // 1.0
+            if (displayName.equalsIgnoreCase("Медный меч") || displayName.equalsIgnoreCase("Copper Sword")) return -2.4; // 1.6
+        }
+        if (attribute == Attribute.GENERIC_ARMOR) {
+            if (displayName.equalsIgnoreCase("Медный шлем") || displayName.equalsIgnoreCase("Copper Helmet")) return 2.0;
+            if (displayName.equalsIgnoreCase("Медная кираса") || displayName.equalsIgnoreCase("Copper Chestplate")) return 5.0;
+            if (displayName.equalsIgnoreCase("Медные поножи") || displayName.equalsIgnoreCase("Copper Leggings")) return 4.0;
+            if (displayName.equalsIgnoreCase("Медные ботинки") || displayName.equalsIgnoreCase("Copper Boots")) return 1.0;
+        }
+        // --- КОНЕЦ ПРОВЕРКИ МЕДИ ---
+        
+        // --- ПРОВЕРКА ВАНИЛЬНЫХ ПРЕДМЕТОВ ---
+        if (attribute == Attribute.GENERIC_ATTACK_DAMAGE) {
+            if (name.endsWith("_SWORD")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 7.0; 
+                if (name.startsWith("IRON_")) return 6.0; 
+                if (name.startsWith("STONE_")) return 5.0; 
+                if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 4.0; 
+            } else if (name.endsWith("_AXE")) {
+                 if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_") || name.startsWith("IRON_") || name.startsWith("STONE_")) return 9.0; 
+                 if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 7.0; 
+            } else if (name.endsWith("_PICKAXE")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 5.0; 
+                if (name.startsWith("IRON_")) return 4.0; 
+                if (name.startsWith("STONE_")) return 3.0; 
+                if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 2.0; 
+            }
+            else if (name.endsWith("_SHOVEL")) {
+                if (name.startsWith("NETHERITE_")) return 5.5; // 1+5.5 = 6.5
+                if (name.startsWith("DIAMOND_")) return 4.5; // 1+4.5 = 5.5
+                if (name.startsWith("IRON_")) return 3.5; // 1+3.5 = 4.5
+                if (name.startsWith("STONE_")) return 2.5; // 1+2.5 = 3.5
+                if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 1.5; // 1+1.5 = 2.5
+            }
+            else if (name.endsWith("_HOE")) {
+                return 0.0; // Все ванильные мотыги имеют базу 1.0 (1+0)
+            }
+            return 0;
+        }
+
+        if (attribute == Attribute.GENERIC_ATTACK_SPEED) {
+            if (name.endsWith("_SWORD")) return -2.4; // 1.6
+            if (name.endsWith("_AXE")) {
+                 if (name.startsWith("STONE_") || name.startsWith("WOODEN_")) return -3.2; // 0.8
+                 if (name.startsWith("GOLDEN_")) return -3.0; // 1.0
+                 return -3.1; // 0.9 (Iron, Diamond, Netherite)
+            }
+            if (name.endsWith("_PICKAXE")) return -2.8; // 1.2
+            if (name.endsWith("_SHOVEL")) return -3.0; // 1.0
+            if (name.endsWith("_HOE")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 0.0; // 4.0
+                if (name.startsWith("IRON_")) return -1.0; // 3.0
+                if (name.startsWith("STONE_")) return -2.0; // 2.0
+                if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return -3.0; // 1.0
+            }
+            return 0; 
+        }
+
+        if (attribute == Attribute.GENERIC_ARMOR) {
+            if (name.endsWith("_HELMET")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 3.0;
+                if (name.startsWith("IRON_") || name.startsWith("CHAINMAIL_") || name.startsWith("GOLDEN_")) return 2.0; 
+                if (name.startsWith("LEATHER_")) return 1.0;
+            } else if (name.endsWith("_CHESTPLATE")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 8.0;
+                if (name.startsWith("IRON_")) return 6.0;
+                if (name.startsWith("CHAINMAIL_") || name.startsWith("GOLDEN_")) return 5.0; 
+                if (name.startsWith("LEATHER_")) return 3.0;
+            } else if (name.endsWith("_LEGGINGS")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 6.0;
+                if (name.startsWith("IRON_")) return 5.0;
+                if (name.startsWith("CHAINMAIL_")) return 4.0; 
+                if (name.startsWith("GOLDEN_")) return 3.0;
+                if (name.startsWith("LEATHER_")) return 2.0;
+            } else if (name.endsWith("_BOOTS")) {
+                if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 3.0;
+                if (name.startsWith("IRON_")) return 2.0;
+                if (name.startsWith("CHAINMAIL_") || name.startsWith("GOLDEN_") || name.startsWith("LEATHER_")) return 1.0; 
+            }
+            return 0;
+        }
+
+        if (attribute == Attribute.GENERIC_ARMOR_TOUGHNESS) {
+            if (name.startsWith("NETHERITE_")) return 3.0;
+            if (name.startsWith("DIAMOND_")) return 2.0;
+            return 0;
+        }
+
+        if (attribute == Attribute.GENERIC_KNOCKBACK_RESISTANCE) {
+            if (name.startsWith("NETHERITE_")) return 0.1; // 10%
+            return 0;
+        }
+
+        return 0; // По умолчанию
+    }
+
+    private void applyDurability(ItemMeta meta, int level) {
+        int currentLevel = meta.getEnchantLevel(Enchantment.UNBREAKING); 
+        meta.addEnchant(Enchantment.UNBREAKING, currentLevel + level, true);
+    }
+
+    private EquipmentSlot getSlot(Material type) {
+        String name = type.name();
+        if (name.endsWith("_HELMET")) return EquipmentSlot.HEAD;
+        if (name.endsWith("_CHESTPLATE")) return EquipmentSlot.CHEST;
+        if (name.endsWith("_LEGGINGS")) return EquipmentSlot.LEGS;
+        if (name.endsWith("_BOOTS")) return EquipmentSlot.FEET;
+        return null;
+    }
+}
