@@ -1,9 +1,9 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-// НОВЫЕ ИМПОРТЫ ДЛЯ РАБОТЫ С ТЕКСТОМ В PAPER
+// НУЖНЫЕ ИМПОРТЫ
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-// ---------------------------------------------
+// -----------------
 
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
@@ -57,13 +57,15 @@ public class AnvilListener implements Listener {
         boolean success = false;
         
         // --- ИСПРАВЛЕННАЯ ЛОГИКА ПОЛУЧЕНИЯ ИМЕНИ ---
-        // Эта строка получает ЛЮБОЕ имя (стандартное или пользовательское)
-        String displayName = PlainTextComponentSerializer.plainText().serialize(meta.displayName());
+        // meta.displayName() возвращает null для ванильных предметов, что вызывает ошибку.
+        // firstItem.displayName() (из Paper API) всегда возвращает правильное имя (стандартное или кастомное).
+        Component nameComponent = firstItem.displayName(); 
+        String displayName = PlainTextComponentSerializer.plainText().serialize(nameComponent);
         // -----------------------------------------
 
         // --- ЛОГИКА УЛУЧШЕНИЯ ---
 
-        // (Медная броня по вашему запросу)
+        // (Медная броня)
         if (displayName.equalsIgnoreCase("Медная кираса") || displayName.equalsIgnoreCase("Copper Chestplate") ||
             displayName.equalsIgnoreCase("Медный шлем") || displayName.equalsIgnoreCase("Copper Helmet") ||
             displayName.equalsIgnoreCase("Медные поножи") || displayName.equalsIgnoreCase("Copper Leggings") ||
@@ -73,12 +75,12 @@ public class AnvilListener implements Listener {
             applyDurability(meta, 3);
             success = true;
         }
-        // (Медные инструменты по вашему запросу)
+        // (Медные инструменты)
         else if (displayName.equalsIgnoreCase("Медная кирка") || displayName.equalsIgnoreCase("Copper Pickaxe") ||
                  displayName.equalsIgnoreCase("Медный топор") || displayName.equalsIgnoreCase("Copper Axe") ||
                  displayName.equalsIgnoreCase("Медная лопата") || displayName.equalsIgnoreCase("Copper Shovel") ||
                  displayName.equalsIgnoreCase("Медная мотыга") || displayName.equalsIgnoreCase("Copper Hoe") ||
-                 displayName.equalsIgnoreCase("Медный меч") || displayName.equalsIgnoreCase("Copper Sword")) // Добавил Медный меч на всякий случай
+                 displayName.equalsIgnoreCase("Медный меч") || displayName.equalsIgnoreCase("Copper Sword")) 
         {
             applyWeaponBonus(meta, type, 6.0, 6.0, displayName); 
             if (displayName.equalsIgnoreCase("Медная кирка") || displayName.equalsIgnoreCase("Copper Pickaxe")) {
@@ -241,7 +243,6 @@ public class AnvilListener implements Listener {
 
     /**
      * "Жестко закодированная" база данных ванильных И кастомных статов.
-     * (Включает статы для Медных предметов, определяемых по имени)
      */
     private double getVanillaAttribute(Material type, Attribute attribute, String displayName) {
         String name = type.name();
@@ -286,14 +287,14 @@ public class AnvilListener implements Listener {
                 if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 2.0; 
             }
             else if (name.endsWith("_SHOVEL")) {
-                if (name.startsWith("NETHERITE_")) return 5.5; // 1+5.5 = 6.5
-                if (name.startsWith("DIAMOND_")) return 4.5; // 1+4.5 = 5.5
-                if (name.startsWith("IRON_")) return 3.5; // 1+3.5 = 4.5
-                if (name.startsWith("STONE_")) return 2.5; // 1+2.5 = 3.5
-                if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 1.5; // 1+1.5 = 2.5
+                if (name.startsWith("NETHERITE_")) return 5.5; 
+                if (name.startsWith("DIAMOND_")) return 4.5; 
+                if (name.startsWith("IRON_")) return 3.5; 
+                if (name.startsWith("STONE_")) return 2.5; 
+                if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 1.5; 
             }
             else if (name.endsWith("_HOE")) {
-                return 0.0; // Все ванильные мотыги имеют базу 1.0 (1+0)
+                return 0.0; 
             }
             return 0;
         }
