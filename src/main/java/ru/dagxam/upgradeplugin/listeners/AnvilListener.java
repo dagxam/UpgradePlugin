@@ -184,13 +184,13 @@ public class AnvilListener implements Listener {
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
-            // ИСПРАВЛЕНО: Используем event.setRepairCost, чтобы убрать предупреждение
-            event.setRepairCost(20);
+            // ИСПРАВЛЕНО: Возвращаем рабочий (хоть и устаревший) метод
+            inventory.setRepairCost(20);
         }
     }
 
     /**
-     * ИСПРАВЛЕНО: Используем AttributeModifier.Builder, чтобы убрать предупреждения
+     * ИСПРАВЛЕНО: Возвращаем рабочий (хоть и устаревший) конструктор
      */
     private void applyWeaponBonus(ItemMeta meta, Material type, double damageBonus, double speedBonus, String displayName) {
         
@@ -203,35 +203,22 @@ public class AnvilListener implements Listener {
         meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
         meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
 
-        // Новый способ создания
-        AttributeModifier damageMod = new AttributeModifier.Builder(UUID.randomUUID())
-            .name("UpgradeDamage")
-            .amount(newDamage)
-            .operation(AttributeModifier.Operation.ADD_NUMBER)
-            .slot(EquipmentSlot.HAND)
-            .build();
+        AttributeModifier damageMod = new AttributeModifier(UUID.randomUUID(), "UpgradeDamage", newDamage, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
         meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, damageMod);
         
-        // Новый способ создания
-        AttributeModifier speedMod = new AttributeModifier.Builder(UUID.randomUUID())
-            .name("UpgradeAtkSpeed")
-            .amount(newSpeed)
-            .operation(AttributeModifier.Operation.ADD_NUMBER)
-            .slot(EquipmentSlot.HAND)
-            .build();
+        AttributeModifier speedMod = new AttributeModifier(UUID.randomUUID(), "UpgradeAtkSpeed", newSpeed, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlot.HAND);
         meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, speedMod);
     }
 
     /**
-     * ИСПРАВЛЕНО: Используем AttributeModifier.Builder и исправлена ОШИБКА
+     * ИСПРАВЛЕНО: Возвращаем рабочий (хоть и устаревший) конструктор
      */
     private void applyArmorBonus(ItemMeta meta, Material type, EquipmentSlot slot, double armorBonus, double healthBonus, double toughnessBonus, double knockbackBonus, String displayName) {
         
         double baseArmor = getVanillaAttribute(type, Attribute.GENERIC_ARMOR, displayName);
         double newArmor = baseArmor + armorBonus;
         
-        // ИСПРАВЛЕНА ОШИБКА: Было GENERIC_ATTACK_TOUGHNESS
-        double baseToughness = getVanillaAttribute(type, Attribute.GENERIC_ARMOR_TOUGHNESS, displayName); 
+        double baseToughness = getVanillaAttribute(type, Attribute.GENERIC_ARMOR_TOUGHNESS, displayName); // Ошибка была здесь, но она исправлена
         double newToughness = baseToughness + toughnessBonus;
 
         double baseKnockback = getVanillaAttribute(type, Attribute.GENERIC_KNOCKBACK_RESISTANCE, displayName);
@@ -242,26 +229,22 @@ public class AnvilListener implements Listener {
         meta.removeAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE);
         
         if (newArmor > 0) {
-            AttributeModifier mod = new AttributeModifier.Builder(UUID.randomUUID())
-                .name("UpgradeArmor").amount(newArmor).operation(AttributeModifier.Operation.ADD_NUMBER).slot(slot).build();
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID(), "UpgradeArmor", newArmor, AttributeModifier.Operation.ADD_NUMBER, slot);
             meta.addAttributeModifier(Attribute.GENERIC_ARMOR, mod);
         }
         
         if (newToughness > 0) {
-            AttributeModifier mod = new AttributeModifier.Builder(UUID.randomUUID())
-                .name("UpgradeToughness").amount(newToughness).operation(AttributeModifier.Operation.ADD_NUMBER).slot(slot).build();
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID(), "UpgradeToughness", newToughness, AttributeModifier.Operation.ADD_NUMBER, slot);
             meta.addAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS, mod);
         }
         
         if (newKnockback > 0) {
-             AttributeModifier mod = new AttributeModifier.Builder(UUID.randomUUID())
-                .name("UpgradeKnockback").amount(newKnockback).operation(AttributeModifier.Operation.ADD_NUMBER).slot(slot).build();
+             AttributeModifier mod = new AttributeModifier(UUID.randomUUID(), "UpgradeKnockback", newKnockback, AttributeModifier.Operation.ADD_NUMBER, slot);
             meta.addAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE, mod);
         }
         
         if (healthBonus > 0) {
-            AttributeModifier mod = new AttributeModifier.Builder(UUID.randomUUID())
-                .name("UpgradeHealth").amount(healthBonus).operation(AttributeModifier.Operation.ADD_NUMBER).slot(slot).build();
+            AttributeModifier mod = new AttributeModifier(UUID.randomUUID(), "UpgradeHealth", healthBonus, AttributeModifier.Operation.ADD_NUMBER, slot);
             meta.addAttributeModifier(Attribute.GENERIC_MAX_HEALTH, mod);
         }
     }
@@ -282,7 +265,7 @@ public class AnvilListener implements Listener {
             if (lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe")) return -2.8; 
             if (lowerName.startsWith("медный топор") || lowerName.startsWith("copper axe")) return -3.2; 
             if (lowerName.startsWith("медная лопата") || lowerName.startsWith("copper shovel")) return -3.0; 
-            if (lowerName.startsWith("медная мотыга") || lowerName.startsWith("copper hoe")) return 0.0; // База 4.0
+            if (lowerName.startsWith("медная мотыга") || lowerName.startsWith("copper hoe")) return 0.0; 
             if (lowerName.startsWith("медный меч") || lowerName.startsWith("copper sword")) return -2.4; 
         }
         if (attribute == Attribute.GENERIC_ARMOR) {
@@ -317,7 +300,7 @@ public class AnvilListener implements Listener {
                 if (name.startsWith("GOLDEN_") || name.startsWith("WOODEN_")) return 1.5; 
             }
             else if (name.endsWith("_HOE")) {
-                 return 1.0; // База для ВСЕХ ванильных мотыг - 1.0 Урона
+                 return 1.0; // База 1.0 для всех
             }
             return 0;
         }
