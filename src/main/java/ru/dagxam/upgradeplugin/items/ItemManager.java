@@ -1,4 +1,3 @@
-// ИЗМЕНЕНО
 package ru.dagxam.upgradeplugin.items;
 
 import org.bukkit.Material;
@@ -7,14 +6,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
-// ИЗМЕНЕНО
-import ru.dagxam.upgradeplugin.UpgradePlugin; // Импортируем главный класс
 
 import java.util.Arrays;
+import java.util.List; // <-- УБЕДИТЕСЬ, ЧТО ЭТОТ ИМПОРТ ЕСТЬ
 
 public class ItemManager {
 
-    // ИЗМЕНЕНО: Создаем ключ, привязанный к вашему плагину
     public static final NamespacedKey UPGRADE_BOOK_KEY = new NamespacedKey("upgradeplugin", "upgrade_book");
 
     public static ItemStack createUpgradeBook() {
@@ -30,7 +27,6 @@ public class ItemManager {
             ));
 
             PersistentDataContainer container = meta.getPersistentDataContainer();
-            // Используем наш обновленный ключ
             container.set(UPGRADE_BOOK_KEY, PersistentDataType.STRING, "true");
 
             book.setItemMeta(meta);
@@ -43,7 +39,29 @@ public class ItemManager {
             return false;
         }
         PersistentDataContainer container = item.getItemMeta().getPersistentDataContainer();
-        // Используем наш обновленный ключ
         return container.has(UPGRADE_BOOK_KEY, PersistentDataType.STRING);
     }
+
+    // --- ДОБАВЬТЕ ЭТОТ НОВЫЙ МЕТОД ---
+    /**
+     * Проверяет, улучшен ли предмет (имеет ли он лор "[Улучшено]").
+     */
+    public static boolean isUpgraded(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        
+        // Используем устаревший, но простой и рабочий метод getLore()
+        @SuppressWarnings("deprecation")
+        List<String> lore = meta.getLore(); 
+        
+        if (lore == null) {
+            return false;
+        }
+        
+        // §b - это бирюзовый цвет, который мы добавили в AnvilListener
+        return lore.contains("§b[Улучшено]");
+    }
+    // --- КОНЕЦ НОВОГО МЕТОДА ---
 }
