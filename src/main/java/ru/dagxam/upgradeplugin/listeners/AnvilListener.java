@@ -27,7 +27,6 @@ public class AnvilListener implements Listener {
     private final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
     
     // ИСПРАВЛЕНО: Мы используем ту же константу, что и ItemManager
-    // (Но ItemManager.UPGRADED_LORE не может быть public static, поэтому дублируем)
     private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
 
     public AnvilListener(UpgradePlugin plugin) {
@@ -182,6 +181,7 @@ public class AnvilListener implements Listener {
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
+            // Используем устаревший, но рабочий метод
             inventory.setRepairCost(20);
         }
     }
