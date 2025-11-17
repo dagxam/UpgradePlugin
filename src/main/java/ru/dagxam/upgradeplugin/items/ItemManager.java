@@ -1,5 +1,8 @@
 package ru.dagxam.upgradeplugin.items;
 
+// УБИРАЕМ ИМПОРТЫ PAPER
+// import net.kyori.adventure.text.Component; 
+// import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; 
 import org.bukkit.ChatColor; // <-- НУЖЕН ЭТОТ ИМПОРТ
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -15,10 +18,8 @@ public class ItemManager {
 
     public static final NamespacedKey UPGRADE_BOOK_KEY = new NamespacedKey("upgradeplugin", "upgrade_book");
     
-    // --- НОВЫЙ КЛЮЧ ДЛЯ ПРОВЕРКИ УЛУЧШЕНИЯ ---
-    // Это "скрытая" метка, которую мы будем ставить на предмет
-    public static final NamespacedKey UPGRADED_ITEM_KEY = new NamespacedKey("upgradeplugin", "upgraded_item");
-    // ----------------------------------------
+    // УБИРАЕМ КЛЮЧ NBT, ОН НЕ РАБОТАЛ
+    // public static final NamespacedKey UPGRADED_ITEM_KEY = new NamespacedKey("upgradeplugin", "upgraded_item");
 
     private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
 
@@ -28,7 +29,7 @@ public class ItemManager {
         ItemMeta meta = book.getItemMeta();
 
         if (meta != null) {
-            // Используем старый API (String), он надежно работает на Paper
+            // ИСПОЛЬЗУЕМ СТАРЫЙ API (String)
             meta.setDisplayName("§bКнига Улучшения"); 
             meta.setLore(Arrays.asList(
                 "§7Используйте на наковальне",
@@ -53,22 +54,28 @@ public class ItemManager {
     }
 
     /**
-     * ИСПРАВЛЕНО: Теперь проверяет NBT-тег, а не лор.
-     * Это 100% надежный способ.
+     * ИСПРАВЛЕНО: Проверяет String лор (getLore)
      */
+    @SuppressWarnings("deprecation") // Подавляем устаревший getLore
     public static boolean isUpgraded(ItemStack item) {
         if (item == null || !item.hasItemMeta()) {
             return false;
         }
         ItemMeta meta = item.getItemMeta();
         
-        PersistentDataContainer container = meta.getPersistentDataContainer();
-        // Проверяем, есть ли у предмета наша "скрытая" метка
-        return container.has(UPGRADED_ITEM_KEY, PersistentDataType.STRING);
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API (getLore)
+        List<String> lore = meta.getLore(); 
+        
+        if (lore == null) {
+            return false;
+        }
+        
+        // Проверяем String
+        return lore.contains(UPGRADED_LORE_STRING);
     }
     
     /**
-     * ИСПРАВЛЕНО: Используем старый API (getDisplayName)
+     * ИСПРАВЛЕНО: Проверяет String имя (getDisplayName)
      */
     @SuppressWarnings("deprecation") 
     public static boolean isCopperTool(ItemStack item) {
@@ -76,6 +83,7 @@ public class ItemManager {
             return false;
         }
         
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API
         String lowerName = ChatColor.stripColor(item.getItemMeta().getDisplayName().toLowerCase());
         
         return lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe") ||
