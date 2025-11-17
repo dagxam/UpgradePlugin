@@ -1,7 +1,9 @@
 package ru.dagxam.upgradeplugin.items;
 
-import net.kyori.adventure.text.Component; 
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; 
+// УБИРАЕМ ИМПОРТЫ PAPER
+// import net.kyori.adventure.text.Component; 
+// import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; 
+import org.bukkit.ChatColor; // <-- НУЖЕН ЭТОТ ИМПОРТ
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -15,22 +17,22 @@ import java.util.List;
 public class ItemManager {
 
     public static final NamespacedKey UPGRADE_BOOK_KEY = new NamespacedKey("upgradeplugin", "upgrade_book");
-    private static final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
     
-    // ИСПРАВЛЕНО: Константа лора, которую мы будем проверять
-    private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
+    // ИСПОЛЬЗУЕМ СТРОКУ
+    private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
 
+    @SuppressWarnings("deprecation") // Подавляем устаревший setDisplayName
     public static ItemStack createUpgradeBook() {
         ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
         ItemMeta meta = book.getItemMeta();
 
         if (meta != null) {
-            // ИСПРАВЛЕНО: Используем Component
-            meta.displayName(Component.text("§bКнига Улучшения")); 
-            meta.lore(Arrays.asList(
-                Component.text("§7Используйте на наковальне"),
-                Component.text("§7вместе с предметом для его"),
-                Component.text("§7улучшения.")
+            // ИСПОЛЬЗУЕМ СТАРЫЙ API (String)
+            meta.setDisplayName("§bКнига Улучшения"); 
+            meta.setLore(Arrays.asList(
+                "§7Используйте на наковальне",
+                "§7вместе с предметом для его",
+                "§7улучшения."
             ));
 
             PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -50,35 +52,37 @@ public class ItemManager {
     }
 
     /**
-     * ИСПРАВЛЕНО: Проверяет Component лор (используя .lore())
+     * ИСПРАВЛЕНО: Проверяет String лор (getLore)
      */
+    @SuppressWarnings("deprecation") // Подавляем устаревший getLore
     public static boolean isUpgraded(ItemStack item) {
         if (item == null || !item.hasItemMeta()) {
             return false;
         }
         ItemMeta meta = item.getItemMeta();
         
-        // ИСПРАВЛЕНО: Используем .lore() (Paper API)
-        List<Component> lore = meta.lore(); 
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API (getLore)
+        List<String> lore = meta.getLore(); 
         
         if (lore == null) {
             return false;
         }
         
-        // Проверяем Component
-        return lore.contains(UPGRADED_LORE);
+        // Проверяем String
+        return lore.contains(UPGRADED_LORE_STRING);
     }
     
     /**
-     * Проверяет, является ли предмет медным инструментом (по имени)
+     * ИСПРАВЛЕНО: Проверяет String имя (getDisplayName)
      */
+    @SuppressWarnings("deprecation") 
     public static boolean isCopperTool(ItemStack item) {
-        if (item == null) {
+        if (item == null || !item.hasItemMeta() || !item.getItemMeta().hasDisplayName()) {
             return false;
         }
         
-        Component nameComponent = item.displayName(); // Безопасно для Paper
-        String lowerName = plainTextSerializer.serialize(nameComponent).trim().toLowerCase();
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API
+        String lowerName = ChatColor.stripColor(item.getItemMeta().getDisplayName().toLowerCase());
         
         return lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe") ||
                lowerName.startsWith("медный топор") || lowerName.startsWith("copper axe") ||
