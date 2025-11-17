@@ -25,6 +25,8 @@ public class AnvilListener implements Listener {
 
     private final UpgradePlugin plugin;
     private final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
+    // Константа для лора (чтобы не было опечаток)
+    private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
 
     public AnvilListener(UpgradePlugin plugin) {
         this.plugin = plugin;
@@ -48,8 +50,9 @@ public class AnvilListener implements Listener {
         ItemStack resultItem = firstItem.clone();
         ItemMeta resultMeta = resultItem.getItemMeta(); 
 
-        List<String> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.getLegacyLore()) : new ArrayList<>(); // Используем getLegacyLore для String
-        if (lore.contains("§b[Улучшено]")) {
+        // ИСПРАВЛЕНО: Используем Component (Paper API) вместо String
+        List<Component> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.lore()) : new ArrayList<>();
+        if (lore.contains(UPGRADED_LORE)) { // Проверяем Component
             event.setResult(null);
             return;
         }
@@ -69,6 +72,7 @@ public class AnvilListener implements Listener {
         // --- ЛОГИКА УЛУЧШЕНИЯ ---
 
         if (lowerName.startsWith("медная кираса") || lowerName.startsWith("copper chestplate") ||
+            /* ... (остальная логика для меди и ванили) ... */
             lowerName.startsWith("медный шлем") || lowerName.startsWith("copper helmet") ||
             lowerName.startsWith("медные поножи") || lowerName.startsWith("copper leggings") ||
             lowerName.startsWith("медные ботинки") || lowerName.startsWith("copper boots")) 
@@ -84,7 +88,6 @@ public class AnvilListener implements Listener {
                  lowerName.startsWith("медный меч") || lowerName.startsWith("copper sword")) 
         {
             applyWeaponBonus(resultMeta, type, 6.0, 6.0, displayName); 
-            // Мы НЕ добавляем эффективность медной кирке, т.к. будем контролировать ее скорость в BlockBreakListener
             success = true;
         }
         // Кожа
@@ -107,7 +110,6 @@ public class AnvilListener implements Listener {
                 success = true;
             } else { // Инструменты/Оружие
                 applyWeaponBonus(resultMeta, type, 8.0, 8.0, displayName);
-                // ИЗМЕНЕНО: Не добавляем эффективность
                 success = true;
             }
         }
@@ -119,7 +121,6 @@ public class AnvilListener implements Listener {
                 success = true;
             } else { // Инструменты/Оружие
                 applyWeaponBonus(resultMeta, type, 9.0, 9.0, displayName);
-                // ИЗМЕНЕНО: Не добавляем эффективность
                 success = true;
             }
         }
@@ -171,8 +172,9 @@ public class AnvilListener implements Listener {
         // --- КОНЕЦ ЛОГИКИ ---
 
         if (success) {
-            lore.add("§b[Улучшено]");
-            resultMeta.setLegacyLore(lore); // Используем setLegacyLore для String
+            // ИСПРАВЛЕНО: Добавляем Component
+            lore.add(UPGRADED_LORE);
+            resultMeta.lore(lore); // Используем .lore()
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
@@ -180,6 +182,11 @@ public class AnvilListener implements Listener {
             inventory.setRepairCost(20);
         }
     }
+
+    // ... (Все остальные методы: applyWeaponBonus, applyArmorBonus, getVanillaAttribute, applyDurability, getSlot) ...
+    // ... (Они остаются такими же, как в моем ответе из шага 46) ...
+    
+    // (Копирую их сюда, чтобы вы были уверены, что у вас полный файл)
 
     private void applyWeaponBonus(ItemMeta meta, Material type, double damageBonus, double speedBonus, String displayName) {
         
@@ -358,4 +365,4 @@ public class AnvilListener implements Listener {
         if (name.endsWith("_BOOTS")) return EquipmentSlot.FEET;
         return null;
     }
-} // <-- ВОТ ЭТА СКОБКА БЫЛА ПРОПУЩЕНА
+}
