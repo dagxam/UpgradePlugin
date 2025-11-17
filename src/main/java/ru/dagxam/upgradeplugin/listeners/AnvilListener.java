@@ -25,7 +25,8 @@ public class AnvilListener implements Listener {
 
     private final UpgradePlugin plugin;
     private final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
-    // Константа для лора (чтобы не было опечаток)
+    
+    // ИСПРАВЛЕНО: Создаем константу для лора, чтобы использовать ее везде
     private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
 
     public AnvilListener(UpgradePlugin plugin) {
@@ -50,9 +51,11 @@ public class AnvilListener implements Listener {
         ItemStack resultItem = firstItem.clone();
         ItemMeta resultMeta = resultItem.getItemMeta(); 
 
-        // ИСПРАВЛЕНО: Используем Component (Paper API) вместо String
+        // ИСПРАВЛЕНО: Используем .lore() (Paper API) для получения Списка Компонентов
         List<Component> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.lore()) : new ArrayList<>();
-        if (lore.contains(UPGRADED_LORE)) { // Проверяем Component
+        
+        // ИСПРАВЛЕНО: Проверяем наличие Компонента
+        if (lore.contains(UPGRADED_LORE)) { 
             event.setResult(null);
             return;
         }
@@ -72,7 +75,6 @@ public class AnvilListener implements Listener {
         // --- ЛОГИКА УЛУЧШЕНИЯ ---
 
         if (lowerName.startsWith("медная кираса") || lowerName.startsWith("copper chestplate") ||
-            /* ... (остальная логика для меди и ванили) ... */
             lowerName.startsWith("медный шлем") || lowerName.startsWith("copper helmet") ||
             lowerName.startsWith("медные поножи") || lowerName.startsWith("copper leggings") ||
             lowerName.startsWith("медные ботинки") || lowerName.startsWith("copper boots")) 
@@ -172,9 +174,10 @@ public class AnvilListener implements Listener {
         // --- КОНЕЦ ЛОГИКИ ---
 
         if (success) {
-            // ИСПРАВЛЕНО: Добавляем Component
+            // ИСПРАВЛЕНО: Добавляем Компонент
             lore.add(UPGRADED_LORE);
-            resultMeta.lore(lore); // Используем .lore()
+            // ИСПРАВЛЕНО: Устанавливаем Компонент
+            resultMeta.lore(lore); 
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
@@ -182,11 +185,6 @@ public class AnvilListener implements Listener {
             inventory.setRepairCost(20);
         }
     }
-
-    // ... (Все остальные методы: applyWeaponBonus, applyArmorBonus, getVanillaAttribute, applyDurability, getSlot) ...
-    // ... (Они остаются такими же, как в моем ответе из шага 46) ...
-    
-    // (Копирую их сюда, чтобы вы были уверены, что у вас полный файл)
 
     private void applyWeaponBonus(ItemMeta meta, Material type, double damageBonus, double speedBonus, String displayName) {
         
