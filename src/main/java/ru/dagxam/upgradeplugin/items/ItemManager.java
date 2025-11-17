@@ -16,7 +16,8 @@ public class ItemManager {
 
     public static final NamespacedKey UPGRADE_BOOK_KEY = new NamespacedKey("upgradeplugin", "upgrade_book");
     private static final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
-    // Константа для лора (чтобы не было опечаток)
+    
+    // ИСПРАВЛЕНО: Константа лора, которую мы будем проверять
     private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
 
     public static ItemStack createUpgradeBook() {
