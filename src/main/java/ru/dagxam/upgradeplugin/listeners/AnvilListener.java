@@ -1,8 +1,10 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+// УБИРАЕМ ИМПОРТЫ PAPER
+// import net.kyori.adventure.text.Component;
+// import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
+import org.bukkit.ChatColor; // <-- НУЖЕН ЭТОТ ИМПОРТ
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -14,8 +16,12 @@ import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+// УБИРАЕМ ИМПОРТЫ NBT
+// import org.bukkit.persistence.PersistentDataContainer;
+// import org.bukkit.persistence.PersistentDataType;
+
 import ru.dagxam.upgradeplugin.UpgradePlugin;
-import ru.dagxam.upgradeplugin.items.ItemManager; // Убедитесь, что импорт правильный
+import ru.dagxam.upgradeplugin.items.ItemManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,15 +30,14 @@ import java.util.UUID;
 public class AnvilListener implements Listener {
 
     private final UpgradePlugin plugin;
-    private final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
-    
-    // ИСПРАВЛЕНО: Мы используем ту же константу, что и ItemManager
-    private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
+    // ИСПОЛЬЗУЕМ СТРОКУ
+    private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
 
     public AnvilListener(UpgradePlugin plugin) {
         this.plugin = plugin;
     }
 
+    @SuppressWarnings("deprecation") // Подавляем устаревшие методы
     @EventHandler
     public void onAnvilPrepare(PrepareAnvilEvent event) {
         AnvilInventory inventory = event.getInventory();
@@ -51,11 +56,10 @@ public class AnvilListener implements Listener {
         ItemStack resultItem = firstItem.clone();
         ItemMeta resultMeta = resultItem.getItemMeta(); 
 
-        // ИСПРАВЛЕНО: Читаем лор как Component, используя .lore()
-        List<Component> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.lore()) : new ArrayList<>();
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API (getLore)
+        List<String> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.getLore()) : new ArrayList<>();
         
-        // ИСПРАВЛЕНО: Проверяем Component
-        if (lore.contains(UPGRADED_LORE)) { 
+        if (lore.contains(UPGRADED_LORE_STRING)) { 
             event.setResult(null);
             return;
         }
@@ -63,16 +67,21 @@ public class AnvilListener implements Listener {
         Material type = resultItem.getType();
         boolean success = false;
         
-        Component nameComponent;
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API
+        String displayName;
         if (meta.hasDisplayName()) {
-            nameComponent = meta.displayName(); 
+            displayName = meta.getDisplayName();
         } else {
-            nameComponent = Component.translatable(type.translationKey()); 
+            // Пытаемся получить "ванильное" имя.
+            displayName = type.name(); // Резервный вариант
+            if (firstItem.getItemMeta().hasDisplayName()) {
+                 displayName = firstItem.getItemMeta().getDisplayName();
+            }
         }
-        String displayName = plainTextSerializer.serialize(nameComponent).trim();
-        String lowerName = displayName.toLowerCase(); 
+        String lowerName = ChatColor.stripColor(displayName.toLowerCase()); 
 
         // --- ЛОГИКА УЛУЧШЕНИЯ ---
+        // (Этот блок кода не менялся, он был рабочий)
 
         if (lowerName.startsWith("медная кираса") || lowerName.startsWith("copper chestplate") ||
             lowerName.startsWith("медный шлем") || lowerName.startsWith("copper helmet") ||
@@ -92,47 +101,42 @@ public class AnvilListener implements Listener {
             applyWeaponBonus(resultMeta, type, 6.0, 6.0, displayName); 
             success = true;
         }
-        // Кожа
         else if (type.name().startsWith("LEATHER_")) {
             applyArmorBonus(resultMeta, type, getSlot(type), 2.0, 4.0, 0, 0, displayName); 
             applyDurability(resultMeta, 2);
             success = true;
         }
-        // Кольчуга
         else if (type.name().startsWith("CHAINMAIL_")) {
             applyArmorBonus(resultMeta, type, getSlot(type), 4.0, 8.0, 0, 0, displayName); 
             applyDurability(resultMeta, 4);
             success = true;
         }
-        // Железо
         else if (type.name().startsWith("IRON_")) {
-            if (getSlot(type) != null) { // Броня
+            if (getSlot(type) != null) { 
                 applyArmorBonus(resultMeta, type, getSlot(type), 6.0, 12.0, 0, 0, displayName); 
                 applyDurability(resultMeta, 6);
                 success = true;
-            } else { // Инструменты/Оружие
+            } else { 
                 applyWeaponBonus(resultMeta, type, 8.0, 8.0, displayName);
                 success = true;
             }
         }
-        // Золото
         else if (type.name().startsWith("GOLDEN_")) {
-            if (getSlot(type) != null) { // Броня
+            if (getSlot(type) != null) { 
                 applyArmorBonus(resultMeta, type, getSlot(type), 7.0, 14.0, 0, 0, displayName);
                 applyDurability(resultMeta, 7);
                 success = true;
-            } else { // Инструменты/Оружие
+            } else { 
                 applyWeaponBonus(resultMeta, type, 9.0, 9.0, displayName);
                 success = true;
             }
         }
-        // Алмазы
         else if (type.name().startsWith("DIAMOND_")) {
-            if (getSlot(type) != null) { // Броня
+            if (getSlot(type) != null) { 
                 applyArmorBonus(resultMeta, type, getSlot(type), 10.0, 20.0, 10.0, 0, displayName); 
                 applyDurability(resultMeta, 10);
                 success = true;
-            } else { // Инструменты/Оружие
+            } else { 
                 applyWeaponBonus(resultMeta, type, 12.0, 12.0, displayName);
                 if (type == Material.DIAMOND_PICKAXE) {
                     resultMeta.addEnchant(Enchantment.EFFICIENCY, 20, true);
@@ -140,13 +144,12 @@ public class AnvilListener implements Listener {
                 success = true;
             }
         }
-        // Незерит
         else if (type.name().startsWith("NETHERITE_")) {
-            if (getSlot(type) != null) { // Броня
+            if (getSlot(type) != null) { 
                 applyArmorBonus(resultMeta, type, getSlot(type), 15.0, 30.0, 15.0, 1.5, displayName); 
                 applyDurability(resultMeta, 15);
                 success = true;
-            } else { // Инструменты/Оружие
+            } else { 
                 applyWeaponBonus(resultMeta, type, 15.0, 15.0, displayName);
                 if (type == Material.NETHERITE_PICKAXE) {
                     resultMeta.addEnchant(Enchantment.EFFICIENCY, 25, true);
@@ -154,7 +157,6 @@ public class AnvilListener implements Listener {
                 success = true;
             }
         }
-        // Дерево
         else if (type.name().startsWith("WOODEN_")) {
             applyWeaponBonus(resultMeta, type, 2.0, 2.0, displayName);
             if (type == Material.WOODEN_PICKAXE) {
@@ -162,7 +164,6 @@ public class AnvilListener implements Listener {
             }
             success = true;
         }
-        // Камень
         else if (type.name().startsWith("STONE_")) {
             applyWeaponBonus(resultMeta, type, 4.0, 4.0, displayName);
             if (type == Material.STONE_PICKAXE) {
@@ -174,21 +175,20 @@ public class AnvilListener implements Listener {
         // --- КОНЕЦ ЛОГИКИ ---
 
         if (success) {
-            // ИСПРАВЛЕНО: Добавляем Компонент
-            lore.add(UPGRADED_LORE);
-            // ИСПРАВЛЕНО: Устанавливаем Компонент, используя .lore(List<Component>)
-            resultMeta.lore(lore); 
+            // ИСПОЛЬЗУЕМ СТАРЫЙ API (String)
+            lore.add(UPGRADED_LORE_STRING);
+            resultMeta.setLore(lore); 
+
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
-            // Мы используем inventory.setRepairCost, т.к. event.setRepairCost не существует.
             inventory.setRepairCost(20);
         }
     }
     
     // ... (Все остальные методы - applyWeaponBonus, applyArmorBonus, getVanillaAttribute, applyDurability, getSlot - остаются без изменений) ...
-
-    @SuppressWarnings("deprecation") // Подавляем устаревший AttributeModifier
+    
+    @SuppressWarnings("deprecation") 
     private void applyWeaponBonus(ItemMeta meta, Material type, double damageBonus, double speedBonus, String displayName) {
         
         double baseDamage = getVanillaAttribute(type, Attribute.GENERIC_ATTACK_DAMAGE, displayName);
@@ -207,7 +207,7 @@ public class AnvilListener implements Listener {
         meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, speedMod);
     }
 
-    @SuppressWarnings("deprecation") // Подавляем устаревший AttributeModifier
+    @SuppressWarnings("deprecation") 
     private void applyArmorBonus(ItemMeta meta, Material type, EquipmentSlot slot, double armorBonus, double healthBonus, double toughnessBonus, double knockbackBonus, String displayName) {
         
         double baseArmor = getVanillaAttribute(type, Attribute.GENERIC_ARMOR, displayName);
@@ -244,10 +244,10 @@ public class AnvilListener implements Listener {
         }
     }
 
-    @SuppressWarnings("deprecation") // Подавляем устаревший getDisplayName
+    @SuppressWarnings("deprecation") 
     private double getVanillaAttribute(Material type, Attribute attribute, String displayName) {
         String name = type.name();
-        String lowerName = displayName.toLowerCase();
+        String lowerName = ChatColor.stripColor(displayName.toLowerCase());
 
         // --- ПРОВЕРКА МЕДНЫХ ПРЕДМЕТОВ ПО ИМЕНИ ---
         if (attribute == Attribute.GENERIC_ATTACK_DAMAGE) {
