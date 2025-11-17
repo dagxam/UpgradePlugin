@@ -17,15 +17,15 @@ public class ItemManager {
     public static final NamespacedKey UPGRADE_BOOK_KEY = new NamespacedKey("upgradeplugin", "upgrade_book");
     private static final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
     
-    // ИСПРАВЛЕНО: Константа-СТРОКА (String)
-    private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
+    // ИСПРАВЛЕНО: Константа лора, которую мы будем проверять
+    private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
 
     public static ItemStack createUpgradeBook() {
         ItemStack book = new ItemStack(Material.ENCHANTED_BOOK);
         ItemMeta meta = book.getItemMeta();
 
         if (meta != null) {
-            // Мы должны использовать Component API, так как setDisplayName(String) устарел
+            // ИСПРАВЛЕНО: Используем Component
             meta.displayName(Component.text("§bКнига Улучшения")); 
             meta.lore(Arrays.asList(
                 Component.text("§7Используйте на наковальне"),
@@ -50,24 +50,23 @@ public class ItemManager {
     }
 
     /**
-     * ИСПРАВЛЕНО: Проверяет String лор (getLegacyLore)
+     * ИСПРАВЛЕНО: Проверяет Component лор (используя .lore())
      */
-    @SuppressWarnings("deprecation") // Подавляем предупреждение об устаревшем методе
     public static boolean isUpgraded(ItemStack item) {
         if (item == null || !item.hasItemMeta()) {
             return false;
         }
         ItemMeta meta = item.getItemMeta();
         
-        // ИСПРАВЛЕНО: Используем .getLegacyLore() (String)
-        List<String> lore = meta.getLegacyLore(); 
+        // ИСПРАВЛЕНО: Используем .lore() (Paper API)
+        List<Component> lore = meta.lore(); 
         
         if (lore == null) {
             return false;
         }
         
-        // Проверяем String
-        return lore.contains(UPGRADED_LORE_STRING);
+        // Проверяем Component
+        return lore.contains(UPGRADED_LORE);
     }
     
     /**
