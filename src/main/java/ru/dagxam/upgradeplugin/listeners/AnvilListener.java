@@ -1,6 +1,6 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-// УБИРАЕМ ВСЕ ИМПОРТЫ PAPER API
+// УБИРАЕМ ВСЕ ИМПОРТЫ PAPER
 // import net.kyori.adventure.text.Component;
 // import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
@@ -16,9 +16,9 @@ import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-// НУЖНЫ ИМПОРТЫ ДЛЯ NBT
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
+// УБИРАЕМ ИМПОРТЫ NBT
+// import org.bukkit.persistence.PersistentDataContainer;
+// import org.bukkit.persistence.PersistentDataType;
 
 import ru.dagxam.upgradeplugin.UpgradePlugin;
 import ru.dagxam.upgradeplugin.items.ItemManager;
@@ -30,6 +30,7 @@ import java.util.UUID;
 public class AnvilListener implements Listener {
 
     private final UpgradePlugin plugin;
+    // ИСПОЛЬЗУЕМ СТРОКУ
     private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
 
     public AnvilListener(UpgradePlugin plugin) {
@@ -55,7 +56,7 @@ public class AnvilListener implements Listener {
         ItemStack resultItem = firstItem.clone();
         ItemMeta resultMeta = resultItem.getItemMeta(); 
 
-        // Используем старый API (getLore)
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API (getLore)
         List<String> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.getLore()) : new ArrayList<>();
         
         if (lore.contains(UPGRADED_LORE_STRING)) { 
@@ -66,11 +67,11 @@ public class AnvilListener implements Listener {
         Material type = resultItem.getType();
         boolean success = false;
         
+        // ИСПОЛЬЗУЕМ СТАРЫЙ API
         String displayName;
         if (meta.hasDisplayName()) {
             displayName = meta.getDisplayName();
         } else {
-            // Пытаемся получить "ванильное" имя.
             displayName = type.name(); // Резервный вариант
             if (firstItem.getItemMeta().hasDisplayName()) {
                  displayName = firstItem.getItemMeta().getDisplayName();
@@ -79,7 +80,7 @@ public class AnvilListener implements Listener {
         String lowerName = ChatColor.stripColor(displayName.toLowerCase()); 
 
         // --- ЛОГИКА УЛУЧШЕНИЯ ---
-        // (Весь этот блок остается без изменений, он был рабочий)
+        // (Этот блок кода не менялся, он был рабочий)
 
         if (lowerName.startsWith("медная кираса") || lowerName.startsWith("copper chestplate") ||
             lowerName.startsWith("медный шлем") || lowerName.startsWith("copper helmet") ||
@@ -173,16 +174,14 @@ public class AnvilListener implements Listener {
         // --- КОНЕЦ ЛОГИКИ ---
 
         if (success) {
-            // 1. Добавляем видимый лор
+            // ИСПОЛЬЗУЕМ СТАРЫЙ API (String)
             lore.add(UPGRADED_LORE_STRING);
             resultMeta.setLore(lore); 
 
-            // 2. --- ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ ---
-            //    Добавляем "скрытую" NBT-метку
-            PersistentDataContainer container = resultMeta.getPersistentDataContainer();
-            container.set(ItemManager.UPGRADED_ITEM_KEY, PersistentDataType.STRING, "true");
-            // ------------------------------------
-
+            // Мы больше НЕ ИСПОЛЬЗУЕМ NBT-тег
+            // PersistentDataContainer container = resultMeta.getPersistentDataContainer();
+            // container.set(ItemManager.UPGRADED_ITEM_KEY, PersistentDataType.STRING, "true");
+            
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
