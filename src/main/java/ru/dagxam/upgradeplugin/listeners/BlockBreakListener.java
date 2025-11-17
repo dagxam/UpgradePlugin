@@ -1,6 +1,8 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-import com.destroystokyo.paper.event.block.BlockDamageAbortEvent; // <-- НУЖЕН ИМПОРТ (PAPER API)
+// ИСПРАВЛЕННЫЙ ИМПОРТ: io.papermc...
+import io.papermc.paper.event.block.BlockDamageAbortEvent; 
+
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -19,18 +21,11 @@ import java.util.UUID;
 
 public class BlockBreakListener implements Listener {
 
-    // Времена добычи (в тиках, 20 тиков = 1 секунда)
-    // Ванильная алмазная кирка ломает обсидиан за 9.4с (188 тиков)
-    // Ванильная незеритовая кирка ломает обсидиан за 8.35с (167 тиков)
-    private static final int OBSIDIAN_BREAK_TIME = 188; // Как алмазной киркой
-    private static final int BEDROCK_BREAK_TIME = 167; // Как незеритовой киркой обсидиан
+    private static final int OBSIDIAN_BREAK_TIME = 188; // 9.4с (Как алмазной киркой)
+    private static final int BEDROCK_BREAK_TIME = 167; // 8.35с (Как незерит обсидиан)
 
-    // Хранилище прогресса добычи
     private final Map<UUID, BlockBreakProgress> miningProgress = new HashMap<>();
 
-    /**
-     * Внутренний класс для отслеживания, что и как долго копает игрок
-     */
     private static class BlockBreakProgress {
         private final Block block;
         private int ticks;
@@ -46,19 +41,17 @@ public class BlockBreakListener implements Listener {
     }
 
 
-    /**
-     * Вызывается КАЖДЫЙ ТИК, когда игрок бьет блок
-     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockDamage(BlockDamageEvent event) {
         Player player = event.getPlayer();
-        if (player.getGameMode() != GameMode.SURVIVAL) return; // Работает только в выживании
+        if (player.getGameMode() != GameMode.SURVIVAL) return; 
 
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
+        // 1. Проверяем, что инструмент в руке УЛУЧШЕН (через ItemManager)
         if (!ItemManager.isUpgraded(tool)) {
-            miningProgress.remove(player.getUniqueId()); // Сбрасываем прогресс, если инструмент не тот
+            miningProgress.remove(player.getUniqueId()); 
             return;
         }
 
@@ -67,21 +60,20 @@ public class BlockBreakListener implements Listener {
         
         BlockBreakProgress progress = miningProgress.computeIfAbsent(player.getUniqueId(), k -> new BlockBreakProgress(block));
 
-        // Если игрок сменил блок, сбрасываем прогресс
         if (!progress.getBlock().equals(block)) {
             progress = new BlockBreakProgress(block);
             miningProgress.put(player.getUniqueId(), progress);
         }
 
-        // 1. Логика для Бедрока (Незеритовая кирка)
+        // 2. Логика для Бедрока (Незеритовая кирка)
         if (blockType == Material.BEDROCK && toolType == Material.NETHERITE_PICKAXE) {
             progress.increment();
             if (progress.getTicks() >= BEDROCK_BREAK_TIME) {
-                event.setInstaBreak(true); // Ломаем блок
+                event.setInstaBreak(true); 
                 miningProgress.remove(player.getUniqueId());
             }
         }
-        // 2. Логика для Обсидиана (Железная, Золотая или Медная кирка)
+        // 3. Логика для Обсидиана (Железная, Золотая или Медная кирка)
         else if (blockType == Material.OBSIDIAN && (
                  toolType == Material.IRON_PICKAXE || 
                  toolType == Material.GOLDEN_PICKAXE ||
@@ -89,18 +81,17 @@ public class BlockBreakListener implements Listener {
         {
             progress.increment();
             if (progress.getTicks() >= OBSIDIAN_BREAK_TIME) {
-                event.setInstaBreak(true); // Ломаем блок
+                event.setInstaBreak(true); 
                 miningProgress.remove(player.getUniqueId());
             }
         }
-        // Если это другой блок, сбрасываем прогресс
         else {
             miningProgress.remove(player.getUniqueId());
         }
     }
 
     /**
-     * Вызывается, когда игрок ПЕРЕСТАЕТ бить блок (эксклюзивно для Paper)
+     * Вызывается, когда игрок ПЕРЕСТАЕТ бить блок (Paper API)
      */
     @EventHandler
     public void onBlockDamageAbort(BlockDamageAbortEvent event) {
@@ -109,9 +100,6 @@ public class BlockBreakListener implements Listener {
     }
 
 
-    /**
-     * Вызывается, когда блок УЖЕ сломан (чтобы настроить дроп)
-     */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
