@@ -1,6 +1,7 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-import io.papermc.paper.event.player.PlayerStopMiningEvent; 
+// ИСПРАВЛЕНО: Мы УДАЛИЛИ импорт io.papermc.paper.event.player.PlayerStopMiningEvent
+
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -19,8 +20,7 @@ import java.util.UUID;
 
 public class BlockBreakListener implements Listener {
 
-    // ИСПРАВЛЕНО: Устанавливаем быструю добычу (20 тиков = 1 секунда)
-    private static final int FAST_BREAK_TIME = 20; 
+    private static final int FAST_BREAK_TIME = 20; // 1 секунда
 
     private final Map<UUID, BlockBreakProgress> miningProgress = new HashMap<>();
     private final Map<UUID, Long> lastMineTick = new HashMap<>();
@@ -62,6 +62,7 @@ public class BlockBreakListener implements Listener {
         
         BlockBreakProgress progress = miningProgress.computeIfAbsent(player.getUniqueId(), k -> new BlockBreakProgress(block));
 
+        // Эта проверка сбрасывает прогресс, если игрок сменил блок ИЛИ перестал копать
         if (!progress.getBlock().equals(block) || (currentTick > lastTick + 1)) {
             progress = new BlockBreakProgress(block);
             miningProgress.put(player.getUniqueId(), progress);
@@ -70,7 +71,7 @@ public class BlockBreakListener implements Listener {
         // 1. Логика для Бедрока (Только Незеритовая кирка)
         if (blockType == Material.BEDROCK && toolType == Material.NETHERITE_PICKAXE) {
             progress.increment();
-            if (progress.getTicks() >= FAST_BREAK_TIME) { // Используем быстрое время
+            if (progress.getTicks() >= FAST_BREAK_TIME) { 
                 event.setInstaBreak(true); 
                 miningProgress.remove(player.getUniqueId());
             }
@@ -79,12 +80,12 @@ public class BlockBreakListener implements Listener {
         else if (blockType == Material.OBSIDIAN && (
                  toolType == Material.IRON_PICKAXE || 
                  toolType == Material.GOLDEN_PICKAXE ||
-                 toolType == Material.DIAMOND_PICKAXE || // <-- ДОБАВЛЕНО
-                 toolType == Material.NETHERITE_PICKAXE || // <-- ДОБАВЛЕНО
+                 toolType == Material.DIAMOND_PICKAXE || 
+                 toolType == Material.NETHERITE_PICKAXE || 
                  ItemManager.isCopperTool(tool))) 
         {
             progress.increment();
-            if (progress.getTicks() >= FAST_BREAK_TIME) { // Используем быстрое время
+            if (progress.getTicks() >= FAST_BREAK_TIME) { 
                 event.setInstaBreak(true); 
                 miningProgress.remove(player.getUniqueId());
             }
@@ -97,10 +98,7 @@ public class BlockBreakListener implements Listener {
     }
 
     
-    @EventHandler
-    public void onPlayerStopMining(PlayerStopMiningEvent event) {
-        miningProgress.remove(event.getPlayer().getUniqueId());
-    }
+    // ИСПРАВЛЕНО: Мы УДАЛИЛИ весь метод onPlayerStopMining(), так как он вызывал ошибку
 
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -122,8 +120,8 @@ public class BlockBreakListener implements Listener {
         if (blockType == Material.OBSIDIAN) {
             if (toolType == Material.IRON_PICKAXE || 
                 toolType == Material.GOLDEN_PICKAXE ||
-                toolType == Material.DIAMOND_PICKAXE || // <-- ДОБАВЛЕНО
-                toolType == Material.NETHERITE_PICKAXE || // <-- ДОБАВЛЕНО
+                toolType == Material.DIAMOND_PICKAXE || 
+                toolType == Material.NETHERITE_PICKAXE || 
                 ItemManager.isCopperTool(tool)) 
             {
                 event.setDropItems(false);
