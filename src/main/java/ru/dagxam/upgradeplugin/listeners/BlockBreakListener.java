@@ -1,7 +1,7 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-// ИСПРАВЛЕННЫЙ ИМПОРТ: io.papermc...
-import io.papermc.paper.event.block.BlockDamageAbortEvent; 
+// ИСПРАВЛЕННЫЙ ИМПОРТ:
+import io.papermc.paper.event.player.PlayerStopMiningEvent; 
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -49,7 +49,6 @@ public class BlockBreakListener implements Listener {
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
-        // 1. Проверяем, что инструмент в руке УЛУЧШЕН (через ItemManager)
         if (!ItemManager.isUpgraded(tool)) {
             miningProgress.remove(player.getUniqueId()); 
             return;
@@ -65,7 +64,7 @@ public class BlockBreakListener implements Listener {
             miningProgress.put(player.getUniqueId(), progress);
         }
 
-        // 2. Логика для Бедрока (Незеритовая кирка)
+        // 1. Логика для Бедрока (Незеритовая кирка)
         if (blockType == Material.BEDROCK && toolType == Material.NETHERITE_PICKAXE) {
             progress.increment();
             if (progress.getTicks() >= BEDROCK_BREAK_TIME) {
@@ -73,11 +72,11 @@ public class BlockBreakListener implements Listener {
                 miningProgress.remove(player.getUniqueId());
             }
         }
-        // 3. Логика для Обсидиана (Железная, Золотая или Медная кирка)
+        // 2. Логика для Обсидиана (Железная, Золотая или Медная кирка)
         else if (blockType == Material.OBSIDIAN && (
                  toolType == Material.IRON_PICKAXE || 
                  toolType == Material.GOLDEN_PICKAXE ||
-                 ItemManager.isCopperTool(tool))) // Проверяем, медная ли это кирка
+                 ItemManager.isCopperTool(tool))) 
         {
             progress.increment();
             if (progress.getTicks() >= OBSIDIAN_BREAK_TIME) {
@@ -91,10 +90,10 @@ public class BlockBreakListener implements Listener {
     }
 
     /**
-     * Вызывается, когда игрок ПЕРЕСТАЕТ бить блок (Paper API)
+     * ИСПРАВЛЕНО: Используем правильное событие PlayerStopMiningEvent
      */
     @EventHandler
-    public void onBlockDamageAbort(BlockDamageAbortEvent event) {
+    public void onPlayerStopMining(PlayerStopMiningEvent event) {
         // Сбрасываем прогресс добычи, если игрок отпустил кнопку
         miningProgress.remove(event.getPlayer().getUniqueId());
     }
