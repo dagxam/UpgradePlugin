@@ -1,7 +1,6 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-// ИСПРАВЛЕННЫЙ ИМПОРТ:
-import io.papermc.paper.event.player.PlayerStopMiningEvent; 
+// Мы больше не используем 'BlockDamageAbortEvent' или 'PlayerStopMiningEvent'
 
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -25,6 +24,8 @@ public class BlockBreakListener implements Listener {
     private static final int BEDROCK_BREAK_TIME = 167; // 8.35с (Как незерит обсидиан)
 
     private final Map<UUID, BlockBreakProgress> miningProgress = new HashMap<>();
+    // Карта для отслеживания "последнего удара"
+    private final Map<UUID, Long> lastMineTick = new HashMap<>();
 
     private static class BlockBreakProgress {
         private final Block block;
@@ -51,18 +52,26 @@ public class BlockBreakListener implements Listener {
 
         if (!ItemManager.isUpgraded(tool)) {
             miningProgress.remove(player.getUniqueId()); 
+            lastMineTick.remove(player.getUniqueId());
             return;
         }
 
         Material toolType = tool.getType();
         Material blockType = block.getType();
         
+        // --- НОВАЯ ЛОГИКА ПРОВЕРКИ ВРЕМЕНИ ---
+        long currentTick = player.getWorld().getFullTime();
+        long lastTick = lastMineTick.getOrDefault(player.getUniqueId(), 0L);
+        
         BlockBreakProgress progress = miningProgress.computeIfAbsent(player.getUniqueId(), k -> new BlockBreakProgress(block));
 
-        if (!progress.getBlock().equals(block)) {
+        // Если игрок сменил блок ИЛИ пропустил больше 1 тика (перестал копать)
+        if (!progress.getBlock().equals(block) || (currentTick > lastTick + 1)) {
+            // Сбрасываем прогресс
             progress = new BlockBreakProgress(block);
             miningProgress.put(player.getUniqueId(), progress);
         }
+        // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
         // 1. Логика для Бедрока (Незеритовая кирка)
         if (blockType == Material.BEDROCK && toolType == Material.NETHERITE_PICKAXE) {
@@ -85,18 +94,16 @@ public class BlockBreakListener implements Listener {
             }
         }
         else {
+            // Если это не тот блок, сбрасываем прогресс на всякий случай
             miningProgress.remove(player.getUniqueId());
         }
+        
+        // Запоминаем тик этого удара
+        lastMineTick.put(player.getUniqueId(), currentTick);
     }
 
-    /**
-     * ИСПРАВЛЕНО: Используем правильное событие PlayerStopMiningEvent
-     */
-    @EventHandler
-    public void onPlayerStopMining(PlayerStopMiningEvent event) {
-        // Сбрасываем прогресс добычи, если игрок отпустил кнопку
-        miningProgress.remove(event.getPlayer().getUniqueId());
-    }
+    
+    // МЫ БОЛЬШЕ НЕ НУЖДАЕМСЯ В 'BlockDamageAbortEvent' ИЛИ 'PlayerStopMiningEvent'
 
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -104,6 +111,10 @@ public class BlockBreakListener implements Listener {
         Player player = event.getPlayer();
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
+
+        // Сбрасываем кэш тиков на всякий случай
+        lastMineTick.remove(player.getUniqueId());
+        miningProgress.remove(player.getUniqueId());
 
         if (player.getGameMode() != GameMode.SURVIVAL) return;
         if (!ItemManager.isUpgraded(tool)) return;
