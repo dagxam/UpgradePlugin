@@ -186,6 +186,9 @@ public class AnvilListener implements Listener {
         }
     }
 
+    // ... (Остальная часть файла: applyWeaponBonus, applyArmorBonus, getVanillaAttribute, applyDurability, getSlot) ...
+    // ... (Они остаются БЕЗ ИЗМЕНЕНИЙ, как в предыдущем ответе) ...
+    
     private void applyWeaponBonus(ItemMeta meta, Material type, double damageBonus, double speedBonus, String displayName) {
         
         double baseDamage = getVanillaAttribute(type, Attribute.GENERIC_ATTACK_DAMAGE, displayName);
