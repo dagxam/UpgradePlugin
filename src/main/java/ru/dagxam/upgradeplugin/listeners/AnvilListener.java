@@ -15,7 +15,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import ru.dagxam.upgradeplugin.UpgradePlugin;
-import ru.dagxam.upgradeplugin.items.ItemManager;
+import ru.dagxam.upgradeplugin.items.ItemManager; // Убедитесь, что импорт правильный
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +26,8 @@ public class AnvilListener implements Listener {
     private final UpgradePlugin plugin;
     private final PlainTextComponentSerializer plainTextSerializer = PlainTextComponentSerializer.plainText();
     
-    // ИСПРАВЛЕНО: Создаем константу для лора, чтобы использовать ее везде
+    // ИСПРАВЛЕНО: Мы используем ту же константу, что и ItemManager
+    // (Но ItemManager.UPGRADED_LORE не может быть public static, поэтому дублируем)
     private static final Component UPGRADED_LORE = Component.text("§b[Улучшено]");
 
     public AnvilListener(UpgradePlugin plugin) {
@@ -51,10 +52,10 @@ public class AnvilListener implements Listener {
         ItemStack resultItem = firstItem.clone();
         ItemMeta resultMeta = resultItem.getItemMeta(); 
 
-        // ИСПРАВЛЕНО: Используем .lore() (Paper API) для получения Списка Компонентов
+        // ИСПРАВЛЕНО: Читаем лор как Component
         List<Component> lore = resultMeta.hasLore() ? new ArrayList<>(resultMeta.lore()) : new ArrayList<>();
         
-        // ИСПРАВЛЕНО: Проверяем наличие Компонента
+        // ИСПРАВЛЕНО: Проверяем Component
         if (lore.contains(UPGRADED_LORE)) { 
             event.setResult(null);
             return;
@@ -181,12 +182,11 @@ public class AnvilListener implements Listener {
             resultItem.setItemMeta(resultMeta); 
             event.setResult(resultItem);
             
-            // Используем устаревший, но рабочий метод
             inventory.setRepairCost(20);
         }
     }
-
-    // ... (Остальная часть файла: applyWeaponBonus, applyArmorBonus, getVanillaAttribute, applyDurability, getSlot) ...
+    
+    // ... (Все остальные методы: applyWeaponBonus, applyArmorBonus, getVanillaAttribute, applyDurability, getSlot) ...
     // ... (Они остаются БЕЗ ИЗМЕНЕНИЙ, как в предыдущем ответе) ...
     
     private void applyWeaponBonus(ItemMeta meta, Material type, double damageBonus, double speedBonus, String displayName) {
