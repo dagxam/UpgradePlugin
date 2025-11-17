@@ -1,9 +1,6 @@
 package ru.dagxam.upgradeplugin.items;
 
-// УБИРАЕМ ИМПОРТЫ PAPER
-// import net.kyori.adventure.text.Component; 
-// import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer; 
-import org.bukkit.ChatColor; // <-- НУЖЕН ЭТОТ ИМПОРТ
+import org.bukkit.ChatColor; 
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
@@ -20,6 +17,8 @@ public class ItemManager {
     
     // ИСПОЛЬЗУЕМ СТРОКУ
     private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
+    // ИСПРАВЛЕНО: Текст, который мы ищем (БЕЗ ЦВЕТА)
+    private static final String LORE_CHECK_STRING = "[Улучшено]";
 
     @SuppressWarnings("deprecation") // Подавляем устаревший setDisplayName
     public static ItemStack createUpgradeBook() {
@@ -27,7 +26,6 @@ public class ItemManager {
         ItemMeta meta = book.getItemMeta();
 
         if (meta != null) {
-            // ИСПОЛЬЗУЕМ СТАРЫЙ API (String)
             meta.setDisplayName("§bКнига Улучшения"); 
             meta.setLore(Arrays.asList(
                 "§7Используйте на наковальне",
@@ -52,7 +50,7 @@ public class ItemManager {
     }
 
     /**
-     * ИСПРАВЛЕНО: Проверяет String лор (getLore)
+     * ИСПРАВЛЕНО: Проверяет String лор, ИГНОРИРУЯ ЦВЕТА
      */
     @SuppressWarnings("deprecation") // Подавляем устаревший getLore
     public static boolean isUpgraded(ItemStack item) {
@@ -61,19 +59,28 @@ public class ItemManager {
         }
         ItemMeta meta = item.getItemMeta();
         
-        // ИСПОЛЬЗУЕМ СТАРЫЙ API (getLore)
         List<String> lore = meta.getLore(); 
         
         if (lore == null) {
             return false;
         }
         
-        // Проверяем String
-        return lore.contains(UPGRADED_LORE_STRING);
+        // ИСПРАВЛЕННАЯ ЛОГИКА
+        for (String line : lore) {
+            // Убираем все коды цвета ("§b", "§f" и т.д.) из строки
+            String strippedLine = ChatColor.stripColor(line);
+            
+            // Проверяем, содержит ли "чистая" строка наш текст
+            if (strippedLine.contains(LORE_CHECK_STRING)) {
+                return true; // Найдено!
+            }
+        }
+        
+        return false; // Не найдено
     }
     
     /**
-     * ИСПРАВЛЕНО: Проверяет String имя (getDisplayName)
+     * Проверяет, является ли предмет медным инструментом (по имени)
      */
     @SuppressWarnings("deprecation") 
     public static boolean isCopperTool(ItemStack item) {
@@ -81,7 +88,6 @@ public class ItemManager {
             return false;
         }
         
-        // ИСПОЛЬЗУЕМ СТАРЫЙ API
         String lowerName = ChatColor.stripColor(item.getItemMeta().getDisplayName().toLowerCase());
         
         return lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe") ||
