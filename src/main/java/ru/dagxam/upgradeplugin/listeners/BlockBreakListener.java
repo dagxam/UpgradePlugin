@@ -43,61 +43,62 @@ public class BlockBreakListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockDamage(BlockDamageEvent event) {
         Player player = event.getPlayer();
-        if (player.getGameMode() != GameMode.SURVIVAL) return; 
+        if (player.getGameMode() != GameMode.SURVIVAL) return;
 
         Block block = event.getBlock();
         ItemStack tool = player.getInventory().getItemInMainHand();
 
+        // Логика только для улучшенных инструментов
         if (!ItemManager.isUpgraded(tool)) {
-            miningProgress.remove(player.getUniqueId()); 
+            miningProgress.remove(player.getUniqueId());
             lastMineTick.remove(player.getUniqueId());
             return;
         }
 
         Material toolType = tool.getType();
         Material blockType = block.getType();
-        
+
         long currentTick = player.getWorld().getFullTime();
         long lastTick = lastMineTick.getOrDefault(player.getUniqueId(), 0L);
-        
+
         BlockBreakProgress progress = miningProgress.computeIfAbsent(player.getUniqueId(), k -> new BlockBreakProgress(block));
 
-        // Эта проверка сбрасывает прогресс, если игрок сменил блок ИЛИ перестал копать
+        // Сброс прогресса, если игрок сменил блок или сделал паузу
         if (!progress.getBlock().equals(block) || (currentTick > lastTick + 1)) {
             progress = new BlockBreakProgress(block);
             miningProgress.put(player.getUniqueId(), progress);
         }
 
-        // 1. Логика для Бедрока (Только Незеритовая кирка)
+        // 1. Логика для Бедрока (Только улучшенная Незеритовая кирка)
         if (blockType == Material.BEDROCK && toolType == Material.NETHERITE_PICKAXE) {
             progress.increment();
-            if (progress.getTicks() >= FAST_BREAK_TIME) { 
-                event.setInstaBreak(true); 
+            if (progress.getTicks() >= FAST_BREAK_TIME) {
+                event.setInstaBreak(true);
                 miningProgress.remove(player.getUniqueId());
             }
         }
-        // 2. Логика для Обсидиана (ВСЕ улучшенные кирки)
+        // 2. Логика для Обсидиана (ВСЕ улучшенные кирки + медная)
         else if (blockType == Material.OBSIDIAN && (
-                 toolType == Material.IRON_PICKAXE || 
+                 toolType == Material.IRON_PICKAXE ||
                  toolType == Material.GOLDEN_PICKAXE ||
-                 toolType == Material.DIAMOND_PICKAXE || 
-                 toolType == Material.NETHERITE_PICKAXE || 
-                 ItemManager.isCopperTool(tool))) 
+                 toolType == Material.DIAMOND_PICKAXE ||
+                 toolType == Material.NETHERITE_PICKAXE ||
+                 ItemManager.isCopperTool(tool)))
         {
             progress.increment();
-            if (progress.getTicks() >= FAST_BREAK_TIME) { 
-                event.setInstaBreak(true); 
+            if (progress.getTicks() >= FAST_BREAK_TIME) {
+                event.setInstaBreak(true);
                 miningProgress.remove(player.getUniqueId());
             }
         }
         else {
             miningProgress.remove(player.getUniqueId());
         }
-        
+
         lastMineTick.put(player.getUniqueId(), currentTick);
     }
 
-    
+
     // ИСПРАВЛЕНО: Мы УДАЛИЛИ весь метод onPlayerStopMining(), так как он вызывал ошибку
 
 
@@ -116,26 +117,30 @@ public class BlockBreakListener implements Listener {
         Material toolType = tool.getType();
         Material blockType = block.getType();
 
-        // 1. Дроп Обсидиана (ВСЕ улучшенные кирки)
+        // 1. Дроп Обсидиана (ВСЕ улучшенные кирки + медная)
         if (blockType == Material.OBSIDIAN) {
-            if (toolType == Material.IRON_PICKAXE || 
+            if (toolType == Material.IRON_PICKAXE ||
                 toolType == Material.GOLDEN_PICKAXE ||
-                toolType == Material.DIAMOND_PICKAXE || 
-                toolType == Material.NETHERITE_PICKAXE || 
-                ItemManager.isCopperTool(tool)) 
+                toolType == Material.DIAMOND_PICKAXE ||
+                toolType == Material.NETHERITE_PICKAXE ||
+                ItemManager.isCopperTool(tool))
             {
                 event.setDropItems(false);
-                block.getWorld().dropItemNaturally(block.getLocation().add(0.5, 0.5, 0.5), 
-                        new ItemStack(Material.OBSIDIAN));
+                block.getWorld().dropItemNaturally(
+                        block.getLocation().add(0.5, 0.5, 0.5),
+                        new ItemStack(Material.OBSIDIAN)
+                );
             }
         }
 
-        // 2. Дроп Бедрока (Только Незерит)
+        // 2. Дроп Бедрока (Только улучшенная Незеритовая кирка)
         if (blockType == Material.BEDROCK) {
             if (toolType == Material.NETHERITE_PICKAXE) {
                 event.setDropItems(false);
-                block.getWorld().dropItemNaturally(block.getLocation().add(0.5, 0.5, 0.5), 
-                        new ItemStack(Material.BEDROCK));
+                block.getWorld().dropItemNaturally(
+                        block.getLocation().add(0.5, 0.5, 0.5),
+                        new ItemStack(Material.BEDROCK)
+                );
             }
         }
     }
