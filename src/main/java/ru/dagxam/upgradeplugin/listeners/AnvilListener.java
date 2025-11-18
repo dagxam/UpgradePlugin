@@ -38,10 +38,7 @@ public class AnvilListener implements Listener {
             return;
         }
 
-        if (!firstItem.hasItemMeta()) {
-            return;
-        }
-
+        // Важно: даже если у предмета нет меты, getItemMeta() вернёт дефолтную
         ItemStack resultItem = firstItem.clone();
         ItemMeta meta = resultItem.getItemMeta();
         if (meta == null) {
@@ -111,9 +108,9 @@ public class AnvilListener implements Listener {
 
     /**
      * Улучшение брони:
-     * - Protection X (в зависимости от материала)
-     * - Unbreaking X
-     * - Для незерита ещё Thorns III
+     * - PROTECTION X
+     * - UNBREAKING X
+     * - Для незерита ещё THORNS III
      * Работает для всех типов, включая COPPER_*.
      */
     private boolean upgradeArmor(ItemMeta meta, Material type) {
@@ -147,7 +144,6 @@ public class AnvilListener implements Listener {
             unbreaking = 3;
         }
 
-        // новые имена энчантов: PROTECTION и UNBREAKING
         meta.addEnchant(Enchantment.PROTECTION, prot, true);
         meta.addEnchant(Enchantment.UNBREAKING, unbreaking, true);
 
@@ -160,8 +156,8 @@ public class AnvilListener implements Listener {
 
     /**
      * Улучшение оружия/инструментов:
-     * - мечи/топоры: Sharpness + Unbreaking
-     * - кирки/лопаты/мотыги: Efficiency + Unbreaking
+     * - мечи/топоры: SHARPNESS + UNBREAKING
+     * - кирки/лопаты/мотыги: EFFICIENCY + UNBREAKING
      */
     private boolean upgradeToolOrWeapon(ItemMeta meta, Material type) {
         String name = type.name();
@@ -183,7 +179,6 @@ public class AnvilListener implements Listener {
                 sharp = 6;
             }
 
-            // DAMAGE_ALL → SHARPNESS, DURABILITY → UNBREAKING
             meta.addEnchant(Enchantment.SHARPNESS, sharp, true);
             meta.addEnchant(Enchantment.UNBREAKING, unbreaking, true);
             return true;
@@ -235,7 +230,6 @@ public class AnvilListener implements Listener {
                 eff = 9;
             }
 
-            // DIG_SPEED → EFFICIENCY, DURABILITY → UNBREAKING
             meta.addEnchant(Enchantment.EFFICIENCY, eff, true);
             meta.addEnchant(Enchantment.UNBREAKING, unbreaking, true);
             return true;
