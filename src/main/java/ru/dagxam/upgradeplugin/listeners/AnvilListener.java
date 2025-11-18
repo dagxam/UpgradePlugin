@@ -35,7 +35,7 @@ public class AnvilListener implements Listener {
         ItemStack firstItem = inventory.getItem(0);
         ItemStack secondItem = inventory.getItem(1);
 
-        // должен быть предмет + книга улучшения
+        // Должен быть предмет + книга улучшения
         if (firstItem == null || secondItem == null || !ItemManager.isUpgradeBook(secondItem)) {
             return;
         }
@@ -52,7 +52,7 @@ public class AnvilListener implements Listener {
                 ? new ArrayList<>(resultMeta.getLore())
                 : new ArrayList<>();
 
-        // уже улучшен — второй раз нельзя
+        // Если уже улучшен – не даём улучшить снова
         if (lore.contains(UPGRADED_LORE_STRING)) {
             event.setResult(null);
             return;
@@ -61,7 +61,7 @@ public class AnvilListener implements Listener {
         Material type = resultItem.getType();
         boolean success = false;
 
-        // имя предмета (кастомное или fallback)
+        // Имя предмета (кастомное или дефолтное)
         String displayName;
         if (meta.hasDisplayName()) {
             displayName = meta.getDisplayName();
@@ -75,8 +75,8 @@ public class AnvilListener implements Listener {
 
         // ===== ЛОГИКА УЛУЧШЕНИЯ =====
 
-        // 0. МЕДНАЯ БРОНЯ
-        if (isCopperArmor(type, lowerName)) {
+        // МЕДНАЯ БРОНЯ (по имени, без Material.COPPER_*)
+        if (isCopperArmorName(lowerName)) {
             applyArmorBonus(
                     resultMeta,
                     type,
@@ -90,8 +90,8 @@ public class AnvilListener implements Listener {
             applyDurability(resultMeta, 3);
             success = true;
         }
-        // 0b. МЕДНОЕ ОРУЖИЕ / ИНСТРУМЕНТЫ
-        else if (isCopperWeapon(type, lowerName)) {
+        // МЕДНОЕ ОРУЖИЕ / ИНСТРУМЕНТЫ
+        else if (isCopperWeaponName(lowerName)) {
             applyWeaponBonus(
                     resultMeta,
                     type,
@@ -101,7 +101,7 @@ public class AnvilListener implements Listener {
             );
             success = true;
         }
-        // 1. КОЖАНАЯ БРОНЯ
+        // КОЖА
         else if (type.name().startsWith("LEATHER_")) {
             applyArmorBonus(
                     resultMeta,
@@ -116,7 +116,7 @@ public class AnvilListener implements Listener {
             applyDurability(resultMeta, 2);
             success = true;
         }
-        // 2. КОЛЬЧУЖНАЯ БРОНЯ
+        // КОЛЬЧУГА
         else if (type.name().startsWith("CHAINMAIL_")) {
             applyArmorBonus(
                     resultMeta,
@@ -131,9 +131,9 @@ public class AnvilListener implements Listener {
             applyDurability(resultMeta, 4);
             success = true;
         }
-        // 3. ЖЕЛЕЗО
+        // ЖЕЛЕЗО
         else if (type.name().startsWith("IRON_")) {
-            if (getSlot(type) != null) {
+            if (getSlot(type) != null) { // броня
                 applyArmorBonus(
                         resultMeta,
                         type,
@@ -146,7 +146,7 @@ public class AnvilListener implements Listener {
                 );
                 applyDurability(resultMeta, 6);
                 success = true;
-            } else {
+            } else { // оружие/инструменты
                 applyWeaponBonus(
                         resultMeta,
                         type,
@@ -157,7 +157,7 @@ public class AnvilListener implements Listener {
                 success = true;
             }
         }
-        // 4. ЗОЛОТО
+        // ЗОЛОТО
         else if (type.name().startsWith("GOLDEN_")) {
             if (getSlot(type) != null) {
                 applyArmorBonus(
@@ -183,7 +183,7 @@ public class AnvilListener implements Listener {
                 success = true;
             }
         }
-        // 5. АЛМАЗ
+        // АЛМАЗ
         else if (type.name().startsWith("DIAMOND_")) {
             if (getSlot(type) != null) {
                 applyArmorBonus(
@@ -212,7 +212,7 @@ public class AnvilListener implements Listener {
                 success = true;
             }
         }
-        // 6. НЕЗЕРИТ
+        // НЕЗЕРИТ
         else if (type.name().startsWith("NETHERITE_")) {
             if (getSlot(type) != null) {
                 applyArmorBonus(
@@ -241,7 +241,7 @@ public class AnvilListener implements Listener {
                 success = true;
             }
         }
-        // 7. ДЕРЕВО
+        // ДЕРЕВО
         else if (type.name().startsWith("WOODEN_")) {
             applyWeaponBonus(
                     resultMeta,
@@ -255,7 +255,7 @@ public class AnvilListener implements Listener {
             }
             success = true;
         }
-        // 8. КАМЕНЬ
+        // КАМЕНЬ
         else if (type.name().startsWith("STONE_")) {
             applyWeaponBonus(
                     resultMeta,
@@ -270,7 +270,7 @@ public class AnvilListener implements Listener {
             success = true;
         }
 
-        // ===== КОНЕЦ ЛОГИКИ УЛУЧШЕНИЙ =====
+        // ===== ФИНАЛ =====
 
         if (success) {
             lore.add(UPGRADED_LORE_STRING);
@@ -278,40 +278,21 @@ public class AnvilListener implements Listener {
             resultItem.setItemMeta(resultMeta);
             event.setResult(resultItem);
 
-            // deprecated, но это только предупреждение, не ошибка
+            // deprecated, но это лишь WARNING
             inventory.setRepairCost(20);
         }
     }
 
-    // ===== ХЕЛПЕРЫ ДЛЯ МЕДИ =====
+    // ===== ХЕЛПЕРЫ ДЛЯ МЕДИ (Только по имени) =====
 
-    private boolean isCopperArmor(Material type, String lowerName) {
-        // по типу (новые ванильные предметы)
-        if (type == Material.COPPER_HELMET
-                || type == Material.COPPER_CHESTPLATE
-                || type == Material.COPPER_LEGGINGS
-                || type == Material.COPPER_BOOTS) {
-            return true;
-        }
-
-        // fallback по имени (кастомные сетапы)
+    private boolean isCopperArmorName(String lowerName) {
         return lowerName.startsWith("медный шлем")      || lowerName.startsWith("copper helmet") ||
                lowerName.startsWith("медная кираса")    || lowerName.startsWith("copper chestplate") ||
                lowerName.startsWith("медные поножи")    || lowerName.startsWith("copper leggings") ||
                lowerName.startsWith("медные ботинки")   || lowerName.startsWith("copper boots");
     }
 
-    private boolean isCopperWeapon(Material type, String lowerName) {
-        // по типу
-        if (type == Material.COPPER_PICKAXE
-                || type == Material.COPPER_AXE
-                || type == Material.COPPER_SHOVEL
-                || type == Material.COPPER_HOE
-                || type == Material.COPPER_SWORD) {
-            return true;
-        }
-
-        // fallback по имени
+    private boolean isCopperWeaponName(String lowerName) {
         return lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe") ||
                lowerName.startsWith("медный топор") || lowerName.startsWith("copper axe")     ||
                lowerName.startsWith("медная лопата") || lowerName.startsWith("copper shovel") ||
@@ -326,28 +307,32 @@ public class AnvilListener implements Listener {
                                   double damageBonus, double speedBonus,
                                   String displayName) {
 
-        double baseDamage = getVanillaAttribute(type, Attribute.GENERIC_ATTACK_DAMAGE, displayName);
+        double baseDamage = getVanillaAttribute(type, Attribute.ATTACK_DAMAGE, displayName);
         double newDamage = baseDamage + damageBonus;
 
-        double baseSpeed = getVanillaAttribute(type, Attribute.GENERIC_ATTACK_SPEED, displayName);
+        double baseSpeed = getVanillaAttribute(type, Attribute.ATTACK_SPEED, displayName);
         double newSpeed = baseSpeed + speedBonus;
 
-        meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
-        meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
+        meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
+        meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
 
         AttributeModifier damageMod = new AttributeModifier(
-                UUID.randomUUID(), "UpgradeDamage",
-                newDamage, AttributeModifier.Operation.ADD_NUMBER,
+                UUID.randomUUID(),
+                "UpgradeDamage",
+                newDamage,
+                AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HAND
         );
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, damageMod);
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, damageMod);
 
         AttributeModifier speedMod = new AttributeModifier(
-                UUID.randomUUID(), "UpgradeAtkSpeed",
-                newSpeed, AttributeModifier.Operation.ADD_NUMBER,
+                UUID.randomUUID(),
+                "UpgradeAtkSpeed",
+                newSpeed,
+                AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HAND
         );
-        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, speedMod);
+        meta.addAttributeModifier(Attribute.ATTACK_SPEED, speedMod);
     }
 
     // ===== БОНУСЫ ДЛЯ БРОНИ =====
@@ -358,53 +343,61 @@ public class AnvilListener implements Listener {
                                  double toughnessBonus, double knockbackBonus,
                                  String displayName) {
 
-        double baseArmor = getVanillaAttribute(type, Attribute.GENERIC_ARMOR, displayName);
+        double baseArmor = getVanillaAttribute(type, Attribute.ARMOR, displayName);
         double newArmor = baseArmor + armorBonus;
 
-        double baseToughness = getVanillaAttribute(type, Attribute.GENERIC_ARMOR_TOUGHNESS, displayName);
+        double baseToughness = getVanillaAttribute(type, Attribute.ARMOR_TOUGHNESS, displayName);
         double newToughness = baseToughness + toughnessBonus;
 
-        double baseKnockback = getVanillaAttribute(type, Attribute.GENERIC_KNOCKBACK_RESISTANCE, displayName);
+        double baseKnockback = getVanillaAttribute(type, Attribute.KNOCKBACK_RESISTANCE, displayName);
         double newKnockback = baseKnockback + knockbackBonus;
 
-        meta.removeAttributeModifier(Attribute.GENERIC_ARMOR);
-        meta.removeAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS);
-        meta.removeAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE);
+        meta.removeAttributeModifier(Attribute.ARMOR);
+        meta.removeAttributeModifier(Attribute.ARMOR_TOUGHNESS);
+        meta.removeAttributeModifier(Attribute.KNOCKBACK_RESISTANCE);
 
         if (newArmor > 0) {
             AttributeModifier mod = new AttributeModifier(
-                    UUID.randomUUID(), "UpgradeArmor",
-                    newArmor, AttributeModifier.Operation.ADD_NUMBER,
+                    UUID.randomUUID(),
+                    "UpgradeArmor",
+                    newArmor,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     slot
             );
-            meta.addAttributeModifier(Attribute.GENERIC_ARMOR, mod);
+            meta.addAttributeModifier(Attribute.ARMOR, mod);
         }
 
         if (newToughness > 0) {
             AttributeModifier mod = new AttributeModifier(
-                    UUID.randomUUID(), "UpgradeToughness",
-                    newToughness, AttributeModifier.Operation.ADD_NUMBER,
+                    UUID.randomUUID(),
+                    "UpgradeToughness",
+                    newToughness,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     slot
             );
-            meta.addAttributeModifier(Attribute.GENERIC_ARMOR_TOUGHNESS, mod);
+            meta.addAttributeModifier(Attribute.ARMOR_TOUGHNESS, mod);
         }
 
         if (newKnockback > 0) {
             AttributeModifier mod = new AttributeModifier(
-                    UUID.randomUUID(), "UpgradeKnockback",
-                    newKnockback, AttributeModifier.Operation.ADD_NUMBER,
+                    UUID.randomUUID(),
+                    "UpgradeKnockback",
+                    newKnockback,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     slot
             );
-            meta.addAttributeModifier(Attribute.GENERIC_KNOCKBACK_RESISTANCE, mod);
+            meta.addAttributeModifier(Attribute.KNOCKBACK_RESISTANCE, mod);
         }
 
         if (healthBonus > 0) {
             AttributeModifier mod = new AttributeModifier(
-                    UUID.randomUUID(), "UpgradeHealth",
-                    healthBonus, AttributeModifier.Operation.ADD_NUMBER,
+                    UUID.randomUUID(),
+                    "UpgradeHealth",
+                    healthBonus,
+                    AttributeModifier.Operation.ADD_NUMBER,
                     slot
             );
-            meta.addAttributeModifier(Attribute.GENERIC_MAX_HEALTH, mod);
+            meta.addAttributeModifier(Attribute.MAX_HEALTH, mod);
         }
     }
 
@@ -415,30 +408,31 @@ public class AnvilListener implements Listener {
         String name = type.name();
         String lowerName = ChatColor.stripColor(displayName.toLowerCase());
 
-        // медные предметы по имени (чтобы кастом не ломался)
-        if (attribute == Attribute.GENERIC_ATTACK_DAMAGE) {
+        // Медные предметы по имени (для совместимости)
+        if (attribute == Attribute.ATTACK_DAMAGE) {
             if (lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe")) return 2.0;
             if (lowerName.startsWith("медный топор") || lowerName.startsWith("copper axe"))     return 7.0;
             if (lowerName.startsWith("медная лопата") || lowerName.startsWith("copper shovel")) return 2.5;
             if (lowerName.startsWith("медная мотыга") || lowerName.startsWith("copper hoe"))     return 1.0;
             if (lowerName.startsWith("медный меч")   || lowerName.startsWith("copper sword"))   return 4.0;
         }
-        if (attribute == Attribute.GENERIC_ATTACK_SPEED) {
+        if (attribute == Attribute.ATTACK_SPEED) {
             if (lowerName.startsWith("медная кирка") || lowerName.startsWith("copper pickaxe")) return -2.8;
             if (lowerName.startsWith("медный топор") || lowerName.startsWith("copper axe"))     return -3.2;
             if (lowerName.startsWith("медная лопата") || lowerName.startsWith("copper shovel")) return -3.0;
             if (lowerName.startsWith("медная мотыга") || lowerName.startsWith("copper hoe"))     return 0.0;
             if (lowerName.startsWith("медный меч")   || lowerName.startsWith("copper sword"))   return -2.4;
         }
-        if (attribute == Attribute.GENERIC_ARMOR) {
+        if (attribute == Attribute.ARMOR) {
             if (lowerName.startsWith("медный шлем")      || lowerName.startsWith("copper helmet"))     return 2.0;
             if (lowerName.startsWith("медная кираса")    || lowerName.startsWith("copper chestplate")) return 5.0;
             if (lowerName.startsWith("медные поножи")    || lowerName.startsWith("copper leggings"))   return 4.0;
             if (lowerName.startsWith("медные ботинки")   || lowerName.startsWith("copper boots"))      return 1.0;
         }
 
-        // дальше — ванильные значения как обычно
-        if (attribute == Attribute.GENERIC_ATTACK_DAMAGE) {
+        // Дальше ванильные значения (как раньше)
+
+        if (attribute == Attribute.ATTACK_DAMAGE) {
             if (name.endsWith("_SWORD")) {
                 if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 7.0;
                 if (name.startsWith("IRON_")) return 6.0;
@@ -465,7 +459,7 @@ public class AnvilListener implements Listener {
             return 0;
         }
 
-        if (attribute == Attribute.GENERIC_ATTACK_SPEED) {
+        if (attribute == Attribute.ATTACK_SPEED) {
             if (name.endsWith("_SWORD")) return -2.4;
             if (name.endsWith("_AXE")) {
                 if (name.startsWith("STONE_") || name.startsWith("WOODEN_")) return -3.2;
@@ -483,7 +477,7 @@ public class AnvilListener implements Listener {
             return 0;
         }
 
-        if (attribute == Attribute.GENERIC_ARMOR) {
+        if (attribute == Attribute.ARMOR) {
             if (name.endsWith("_HELMET")) {
                 if (name.startsWith("NETHERITE_") || name.startsWith("DIAMOND_")) return 3.0;
                 if (name.startsWith("IRON_") || name.startsWith("CHAINMAIL_") || name.startsWith("GOLDEN_")) return 2.0;
@@ -507,14 +501,19 @@ public class AnvilListener implements Listener {
             return 0;
         }
 
-        if (attribute == Attribute.GENERIC_ARMOR_TOUGHNESS) {
+        if (attribute == Attribute.ARMOR_TOUGHNESS) {
             if (name.startsWith("NETHERITE_")) return 3.0;
             if (name.startsWith("DIAMOND_")) return 2.0;
             return 0;
         }
 
-        if (attribute == Attribute.GENERIC_KNOCKBACK_RESISTANCE) {
+        if (attribute == Attribute.KNOCKBACK_RESISTANCE) {
             if (name.startsWith("NETHERITE_")) return 0.1;
+            return 0;
+        }
+
+        if (attribute == Attribute.MAX_HEALTH) {
+            // по умолчанию ничего не добавляем
             return 0;
         }
 
