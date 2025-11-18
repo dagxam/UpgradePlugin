@@ -1,6 +1,5 @@
 package ru.dagxam.upgradeplugin.listeners;
 
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
@@ -23,7 +22,6 @@ public class AnvilListener implements Listener {
 
     private final UpgradePlugin plugin;
 
-    // маркер улучшения, которым пользуется BlockBreakListener
     private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
 
     public AnvilListener(UpgradePlugin plugin) {
@@ -33,24 +31,22 @@ public class AnvilListener implements Listener {
     @SuppressWarnings("deprecation")
     @EventHandler
     public void onAnvilPrepare(PrepareAnvilEvent event) {
-        AnvilInventory inventory = event.getInventory();
-        ItemStack firstItem = inventory.getItem(0);   // предмет
-        ItemStack secondItem = inventory.getItem(1);  // книга
+        AnvilInventory inv = event.getInventory();
+        ItemStack baseItem = inv.getItem(0);
+        ItemStack book = inv.getItem(1);
 
-        // должен быть предмет + книга улучшения
-        if (firstItem == null || secondItem == null || !ItemManager.isUpgradeBook(secondItem)) {
+        // Нужен предмет + книга улучшения
+        if (baseItem == null || book == null || !ItemManager.isUpgradeBook(book)) {
             return;
         }
 
-        ItemStack result = firstItem.clone();
+        ItemStack result = baseItem.clone();
         ItemMeta meta = result.getItemMeta();
-        if (meta == null) {
-            return;
-        }
+        if (meta == null) return;
 
         List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
 
-        // уже улучшен — второй раз нельзя
+        // Уже улучшен
         if (lore.contains(UPGRADED_LORE_STRING)) {
             event.setResult(null);
             return;
@@ -59,27 +55,23 @@ public class AnvilListener implements Listener {
         Material type = result.getType();
         boolean upgraded = false;
 
-        // броня
         if (isArmor(type)) {
             upgraded = upgradeArmor(meta, type);
-        }
-        // оружие / инструменты
-        else if (isToolOrWeapon(type)) {
+        } else if (isToolOrWeapon(type)) {
             upgraded = upgradeToolOrWeapon(meta, type);
         }
 
-        if (!upgraded) {
-            return;
-        }
+        if (!upgraded) return;
 
         lore.add(UPGRADED_LORE_STRING);
         meta.setLore(lore);
         result.setItemMeta(meta);
 
         event.setResult(result);
-        // deprecated, но только warning
-        inventory.setRepairCost(20);
+        inv.setRepairCost(20); // только warning, но не ошибка
     }
+
+    // ====== Классификация ======
 
     private boolean isArmor(Material type) {
         String n = type.name();
@@ -98,9 +90,8 @@ public class AnvilListener implements Listener {
                 || n.endsWith("_HOE");
     }
 
-    // ======================
-    // УЛУЧШЕНИЕ БРОНИ
-    // ======================
+    // ====== Броня ======
+
     private boolean upgradeArmor(ItemMeta meta, Material type) {
         String name = type.name();
 
@@ -124,16 +115,13 @@ public class AnvilListener implements Listener {
 
         meta.addEnchant(Enchantment.PROTECTION, prot, true);
         meta.addEnchant(Enchantment.UNBREAKING, unbreak, true);
-        if (thorns > 0) {
-            meta.addEnchant(Enchantment.THORNS, thorns, true);
-        }
+        if (thorns > 0) meta.addEnchant(Enchantment.THORNS, thorns, true);
 
         return true;
     }
 
-    // ======================
-    // УЛУЧШЕНИЕ ОРУЖИЯ / ИНСТРУМЕНТОВ
-    // ======================
+    // ====== Инструменты / оружие ======
+
     private boolean upgradeToolOrWeapon(ItemMeta meta, Material type) {
         String name = type.name();
 
@@ -149,57 +137,168 @@ public class AnvilListener implements Listener {
             meta.addEnchant(Enchantment.UNBREAKING, 5, true);
         }
 
-        // главное: добавляем бонусы к урону/скорости
         applyMaterialCombatBonus(meta, type);
 
         return true;
     }
 
-    // ======================
-    // Бонус к урону и скорости:
-    // дерево +2, камень +4, медь +5, железо +8,
-    // золото +9, алмаз +12, незерит +15
-    // ======================
+    // ====== Бонус к урону и скорости (база + бонус) ======
+
     private void applyMaterialCombatBonus(ItemMeta meta, Material type) {
         double bonus = getBonusForMaterial(type);
-        if (bonus == 0.0) {
-            return;
-        }
+        if (bonus == 0.0) return;
 
-        // не трогаем базовые ванильные модификаторы:
-        // просто добавляем ещё один, поверх них
+        double baseDamage = getBaseDamage(type);
+        double baseSpeed  = getBaseSpeed(type);
 
-        AttributeModifier dmg = new AttributeModifier(
+        // цель: базовое значение + бонус
+        double targetDamage = baseDamage + bonus;
+        double targetSpeed  = baseSpeed + bonus;
+
+        // атрибуты по умолчанию: damage = 1 + модификаторы, speed = 4 + модификаторы
+        double damageModifierValue = targetDamage - 1.0;
+        double speedModifierValue  = targetSpeed - 4.0;
+
+        // убираем старые модификаторы, ставим свои
+        meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
+        meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
+
+        AttributeModifier dmgMod = new AttributeModifier(
                 UUID.randomUUID(),
                 "upgrade_dmg",
-                bonus,
+                damageModifierValue,
                 AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HAND
         );
 
-        AttributeModifier spd = new AttributeModifier(
+        AttributeModifier spdMod = new AttributeModifier(
                 UUID.randomUUID(),
                 "upgrade_speed",
-                bonus,
+                speedModifierValue,
                 AttributeModifier.Operation.ADD_NUMBER,
                 EquipmentSlot.HAND
         );
 
-        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, dmg);
-        meta.addAttributeModifier(Attribute.ATTACK_SPEED, spd);
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, dmgMod);
+        meta.addAttributeModifier(Attribute.ATTACK_SPEED, spdMod);
     }
+
+    // ====== Таблица бонусов по материалам ======
 
     private double getBonusForMaterial(Material type) {
         String n = type.name();
 
-        if (n.startsWith("WOODEN_"))   return 2;
-        if (n.startsWith("STONE_"))    return 4;
-        if (n.startsWith("COPPER_"))   return 5;
-        if (n.startsWith("IRON_"))     return 8;
-        if (n.startsWith("GOLDEN_"))   return 9;
-        if (n.startsWith("DIAMOND_"))  return 12;
-        if (n.startsWith("NETHERITE_"))return 15;
+        if (n.startsWith("WOODEN_"))    return 2;
+        if (n.startsWith("STONE_"))     return 4;
+        if (n.startsWith("COPPER_"))    return 5;
+        if (n.startsWith("IRON_"))      return 8;
+        if (n.startsWith("GOLDEN_"))    return 9;
+        if (n.startsWith("DIAMOND_"))   return 12;
+        if (n.startsWith("NETHERITE_")) return 15;
 
         return 0;
+    }
+
+    // ====== Ванильный урон (то, что ты видишь до улучшения) ======
+
+    private double getBaseDamage(Material type) {
+        String n = type.name();
+
+        // МЕЧИ
+        if (n.endsWith("_SWORD")) {
+            if (n.startsWith("WOODEN_") || n.startsWith("GOLDEN_")) return 4.0;
+            if (n.startsWith("STONE_"))    return 5.0;
+            if (n.startsWith("COPPER_"))   return 5.0; // между камнем и железом
+            if (n.startsWith("IRON_"))     return 6.0;
+            if (n.startsWith("DIAMOND_"))  return 7.0;
+            if (n.startsWith("NETHERITE_"))return 8.0;
+        }
+
+        // ТОПОРЫ
+        if (n.endsWith("_AXE")) {
+            if (n.startsWith("WOODEN_"))   return 7.0;
+            if (n.startsWith("STONE_"))    return 9.0;
+            if (n.startsWith("COPPER_"))   return 8.0;
+            if (n.startsWith("IRON_"))     return 9.0;
+            if (n.startsWith("GOLDEN_"))   return 7.0;
+            if (n.startsWith("DIAMOND_"))  return 9.0;
+            if (n.startsWith("NETHERITE_"))return 10.0;
+        }
+
+        // КИРКИ
+        if (n.endsWith("_PICKAXE")) {
+            if (n.startsWith("WOODEN_"))   return 2.0;
+            if (n.startsWith("STONE_"))    return 3.0;
+            if (n.startsWith("COPPER_"))   return 3.5;
+            if (n.startsWith("IRON_"))     return 4.0;
+            if (n.startsWith("GOLDEN_"))   return 2.0;
+            if (n.startsWith("DIAMOND_"))  return 5.0;
+            if (n.startsWith("NETHERITE_"))return 6.0; // как на скрине
+        }
+
+        // ЛОПАТЫ
+        if (n.endsWith("_SHOVEL")) {
+            if (n.startsWith("WOODEN_"))   return 2.5;
+            if (n.startsWith("STONE_"))    return 3.5;
+            if (n.startsWith("COPPER_"))   return 4.0;
+            if (n.startsWith("IRON_"))     return 4.5;
+            if (n.startsWith("GOLDEN_"))   return 2.5;
+            if (n.startsWith("DIAMOND_"))  return 5.5;
+            if (n.startsWith("NETHERITE_"))return 6.5;
+        }
+
+        // МОТЫГИ
+        if (n.endsWith("_HOE")) {
+            if (n.startsWith("WOODEN_"))   return 1.0;
+            if (n.startsWith("STONE_"))    return 1.0;
+            if (n.startsWith("COPPER_"))   return 1.0;
+            if (n.startsWith("IRON_"))     return 1.0;
+            if (n.startsWith("GOLDEN_"))   return 1.0;
+            if (n.startsWith("DIAMOND_"))  return 1.0;
+            if (n.startsWith("NETHERITE_"))return 1.0;
+        }
+
+        return 1.0; // безопасный дефолт
+    }
+
+    // ====== Ванильная скорость атаки ======
+
+    private double getBaseSpeed(Material type) {
+        String n = type.name();
+
+        // МЕЧИ — 1.6
+        if (n.endsWith("_SWORD")) {
+            return 1.6;
+        }
+
+        // ТОПОРЫ — около 0.8–1.0
+        if (n.endsWith("_AXE")) {
+            if (n.startsWith("WOODEN_") || n.startsWith("STONE_")) return 0.8;
+            if (n.startsWith("COPPER_") || n.startsWith("IRON_"))  return 0.9;
+            if (n.startsWith("GOLDEN_") || n.startsWith("DIAMOND_") || n.startsWith("NETHERITE_")) return 1.0;
+        }
+
+        // КИРКИ — 1.2
+        if (n.endsWith("_PICKAXE")) {
+            return 1.2;
+        }
+
+        // ЛОПАТЫ — 1.0
+        if (n.endsWith("_SHOVEL")) {
+            return 1.0;
+        }
+
+        // МОТЫГИ — разные
+        if (n.endsWith("_HOE")) {
+            if (n.startsWith("WOODEN_"))   return 1.0;
+            if (n.startsWith("STONE_"))    return 2.0;
+            if (n.startsWith("COPPER_"))   return 2.5;
+            if (n.startsWith("IRON_"))     return 3.0;
+            if (n.startsWith("GOLDEN_"))   return 1.0;
+            if (n.startsWith("DIAMOND_"))  return 4.0;
+            if (n.startsWith("NETHERITE_"))return 4.0;
+        }
+
+        return 4.0; // дефолт игрока, если что-то экзотическое
     }
 }
