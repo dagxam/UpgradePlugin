@@ -37,16 +37,20 @@ public class AnvilListener implements Listener {
         ItemStack firstItem = inventory.getItem(0);   // предмет
         ItemStack secondItem = inventory.getItem(1);  // книга
 
+        // должен быть предмет + книга улучшения
         if (firstItem == null || secondItem == null || !ItemManager.isUpgradeBook(secondItem)) {
             return;
         }
 
         ItemStack result = firstItem.clone();
         ItemMeta meta = result.getItemMeta();
-        if (meta == null) return;
+        if (meta == null) {
+            return;
+        }
 
         List<String> lore = meta.hasLore() ? new ArrayList<>(meta.getLore()) : new ArrayList<>();
 
+        // уже улучшен — второй раз нельзя
         if (lore.contains(UPGRADED_LORE_STRING)) {
             event.setResult(null);
             return;
@@ -55,16 +59,25 @@ public class AnvilListener implements Listener {
         Material type = result.getType();
         boolean upgraded = false;
 
-        if (isArmor(type)) upgraded = upgradeArmor(meta, type);
-        else if (isToolOrWeapon(type)) upgraded = upgradeToolOrWeapon(meta, type);
+        // броня
+        if (isArmor(type)) {
+            upgraded = upgradeArmor(meta, type);
+        }
+        // оружие / инструменты
+        else if (isToolOrWeapon(type)) {
+            upgraded = upgradeToolOrWeapon(meta, type);
+        }
 
-        if (!upgraded) return;
+        if (!upgraded) {
+            return;
+        }
 
         lore.add(UPGRADED_LORE_STRING);
         meta.setLore(lore);
         result.setItemMeta(meta);
 
         event.setResult(result);
+        // deprecated, но только warning
         inventory.setRepairCost(20);
     }
 
@@ -84,7 +97,6 @@ public class AnvilListener implements Listener {
                 || n.endsWith("_SHOVEL")
                 || n.endsWith("_HOE");
     }
-
 
     // ======================
     // УЛУЧШЕНИЕ БРОНИ
@@ -112,11 +124,12 @@ public class AnvilListener implements Listener {
 
         meta.addEnchant(Enchantment.PROTECTION, prot, true);
         meta.addEnchant(Enchantment.UNBREAKING, unbreak, true);
-        if (thorns > 0) meta.addEnchant(Enchantment.THORNS, thorns, true);
+        if (thorns > 0) {
+            meta.addEnchant(Enchantment.THORNS, thorns, true);
+        }
 
         return true;
     }
-
 
     // ======================
     // УЛУЧШЕНИЕ ОРУЖИЯ / ИНСТРУМЕНТОВ
@@ -124,37 +137,38 @@ public class AnvilListener implements Listener {
     private boolean upgradeToolOrWeapon(ItemMeta meta, Material type) {
         String name = type.name();
 
-        // Все виды получают Efficiency / Unbreaking
+        // кирки / лопаты / мотыги — Efficiency + Unbreaking
         if (name.endsWith("_PICKAXE") || name.endsWith("_SHOVEL") || name.endsWith("_HOE")) {
             meta.addEnchant(Enchantment.EFFICIENCY, 10, true);
             meta.addEnchant(Enchantment.UNBREAKING, 5, true);
         }
 
-        // Мечи и топоры — Sharpness
+        // мечи и топоры — Sharpness + Unbreaking
         if (name.endsWith("_SWORD") || name.endsWith("_AXE")) {
             meta.addEnchant(Enchantment.SHARPNESS, 6, true);
             meta.addEnchant(Enchantment.UNBREAKING, 5, true);
         }
 
+        // главное: добавляем бонусы к урону/скорости
         applyMaterialCombatBonus(meta, type);
 
         return true;
     }
 
-
     // ======================
-    // ГЛАВНАЯ ЧАСТЬ:
-    // Урон и скорость по твоим числам
+    // Бонус к урону и скорости:
+    // дерево +2, камень +4, медь +5, железо +8,
+    // золото +9, алмаз +12, незерит +15
     // ======================
     private void applyMaterialCombatBonus(ItemMeta meta, Material type) {
-
         double bonus = getBonusForMaterial(type);
+        if (bonus == 0.0) {
+            return;
+        }
 
-        // убираем старые атрибуты, если были
-        meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
-        meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
+        // не трогаем базовые ванильные модификаторы:
+        // просто добавляем ещё один, поверх них
 
-        // добавляем новые
         AttributeModifier dmg = new AttributeModifier(
                 UUID.randomUUID(),
                 "upgrade_dmg",
@@ -175,20 +189,16 @@ public class AnvilListener implements Listener {
         meta.addAttributeModifier(Attribute.ATTACK_SPEED, spd);
     }
 
-
-    // ======================
-    // Система бонусов по материалам
-    // ======================
     private double getBonusForMaterial(Material type) {
         String n = type.name();
 
-        if (n.startsWith("WOODEN_")) return 2;
-        if (n.startsWith("STONE_")) return 4;
-        if (n.startsWith("COPPER_")) return 5;
-        if (n.startsWith("IRON_")) return 8;
-        if (n.startsWith("GOLDEN_")) return 9;
-        if (n.startsWith("DIAMOND_")) return 12;
-        if (n.startsWith("NETHERITE_")) return 15;
+        if (n.startsWith("WOODEN_"))   return 2;
+        if (n.startsWith("STONE_"))    return 4;
+        if (n.startsWith("COPPER_"))   return 5;
+        if (n.startsWith("IRON_"))     return 8;
+        if (n.startsWith("GOLDEN_"))   return 9;
+        if (n.startsWith("DIAMOND_"))  return 12;
+        if (n.startsWith("NETHERITE_"))return 15;
 
         return 0;
     }
