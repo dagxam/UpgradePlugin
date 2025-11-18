@@ -2,11 +2,14 @@ package ru.dagxam.upgradeplugin.listeners;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import ru.dagxam.upgradeplugin.UpgradePlugin;
@@ -14,6 +17,7 @@ import ru.dagxam.upgradeplugin.items.ItemManager;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class AnvilListener implements Listener {
 
@@ -38,7 +42,7 @@ public class AnvilListener implements Listener {
             return;
         }
 
-        // Важно: даже если у предмета нет меты, getItemMeta() вернёт дефолтную
+        // Даже если меты не было — getItemMeta() вернёт дефолтную
         ItemStack resultItem = firstItem.clone();
         ItemMeta meta = resultItem.getItemMeta();
         if (meta == null) {
@@ -156,8 +160,8 @@ public class AnvilListener implements Listener {
 
     /**
      * Улучшение оружия/инструментов:
-     * - мечи/топоры: SHARPNESS + UNBREAKING
-     * - кирки/лопаты/мотыги: EFFICIENCY + UNBREAKING
+     * - мечи/топоры: SHARPNESS + UNBREAKING + буст атрибутов
+     * - кирки/лопаты/мотыги: EFFICIENCY + UNBREAKING + буст атрибутов
      */
     private boolean upgradeToolOrWeapon(ItemMeta meta, Material type) {
         String name = type.name();
@@ -181,6 +185,8 @@ public class AnvilListener implements Listener {
 
             meta.addEnchant(Enchantment.SHARPNESS, sharp, true);
             meta.addEnchant(Enchantment.UNBREAKING, unbreaking, true);
+
+            applyWeaponAttributes(meta, type);
             return true;
         }
 
@@ -203,6 +209,8 @@ public class AnvilListener implements Listener {
 
             meta.addEnchant(Enchantment.SHARPNESS, sharp, true);
             meta.addEnchant(Enchantment.UNBREAKING, unbreaking, true);
+
+            applyWeaponAttributes(meta, type);
             return true;
         }
 
@@ -232,9 +240,88 @@ public class AnvilListener implements Listener {
 
             meta.addEnchant(Enchantment.EFFICIENCY, eff, true);
             meta.addEnchant(Enchantment.UNBREAKING, unbreaking, true);
+
+            applyWeaponAttributes(meta, type);
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Тут мы уже реально двигаем зелёные строки:
+     * "Урон при атаке" и "Скорость атаки".
+     * Просто добавляем бонус к существующим значениям.
+     */
+    @SuppressWarnings("deprecation")
+    private void applyWeaponAttributes(ItemMeta meta, Material type) {
+        String name = type.name();
+
+        double damageBonus = 0.0;
+        double speedBonus = 0.0;
+
+        // Простая система: чем сильнее материал, тем больше буст
+        if (name.endsWith("_SWORD") || name.endsWith("_AXE")) {
+            if (name.startsWith("WOODEN_") || name.startsWith("STONE_")) {
+                damageBonus = 2.0;
+                speedBonus = 0.2;
+            } else if (name.startsWith("COPPER_") || name.startsWith("IRON_")) {
+                damageBonus = 3.0;
+                speedBonus = 0.3;
+            } else if (name.startsWith("GOLDEN_")) {
+                damageBonus = 3.0;
+                speedBonus = 0.4;
+            } else if (name.startsWith("DIAMOND_")) {
+                damageBonus = 4.0;
+                speedBonus = 0.4;
+            } else if (name.startsWith("NETHERITE_")) {
+                damageBonus = 5.0;
+                speedBonus = 0.5;
+            }
+        } else if (name.endsWith("_PICKAXE") || name.endsWith("_SHOVEL") || name.endsWith("_HOE")) {
+            if (name.startsWith("WOODEN_") || name.startsWith("STONE_")) {
+                damageBonus = 1.0;
+                speedBonus = 0.2;
+            } else if (name.startsWith("COPPER_") || name.startsWith("IRON_")) {
+                damageBonus = 2.0;
+                speedBonus = 0.3;
+            } else if (name.startsWith("GOLDEN_")) {
+                damageBonus = 2.0;
+                speedBonus = 0.4;
+            } else if (name.startsWith("DIAMOND_")) {
+                damageBonus = 3.0;
+                speedBonus = 0.4;
+            } else if (name.startsWith("NETHERITE_")) {
+                damageBonus = 4.0;
+                speedBonus = 0.5;
+            }
+        }
+
+        // Сначала чистим предыдущие кастомные модификаторы
+        meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
+        meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
+
+        // Потом добавляем наш бонус (ADD_NUMBER → просто плюс к базовому)
+        if (damageBonus != 0.0) {
+            AttributeModifier dmgMod = new AttributeModifier(
+                    UUID.randomUUID(),
+                    "upgrade_damage",
+                    damageBonus,
+                    AttributeModifier.Operation.ADD_NUMBER,
+                    EquipmentSlot.HAND
+            );
+            meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, dmgMod);
+        }
+
+        if (speedBonus != 0.0) {
+            AttributeModifier spdMod = new AttributeModifier(
+                    UUID.randomUUID(),
+                    "upgrade_speed",
+                    speedBonus,
+                    AttributeModifier.Operation.ADD_NUMBER,
+                    EquipmentSlot.HAND
+            );
+            meta.addAttributeModifier(Attribute.ATTACK_SPEED, spdMod);
+        }
     }
 }
