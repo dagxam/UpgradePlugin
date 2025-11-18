@@ -151,4 +151,45 @@ public class AnvilListener implements Listener {
         double bonus = getBonusForMaterial(type);
 
         // убираем старые атрибуты, если были
-        meta.re
+        meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
+        meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
+
+        // добавляем новые
+        AttributeModifier dmg = new AttributeModifier(
+                UUID.randomUUID(),
+                "upgrade_dmg",
+                bonus,
+                AttributeModifier.Operation.ADD_NUMBER,
+                EquipmentSlot.HAND
+        );
+
+        AttributeModifier spd = new AttributeModifier(
+                UUID.randomUUID(),
+                "upgrade_speed",
+                bonus,
+                AttributeModifier.Operation.ADD_NUMBER,
+                EquipmentSlot.HAND
+        );
+
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, dmg);
+        meta.addAttributeModifier(Attribute.ATTACK_SPEED, spd);
+    }
+
+
+    // ======================
+    // Система бонусов по материалам
+    // ======================
+    private double getBonusForMaterial(Material type) {
+        String n = type.name();
+
+        if (n.startsWith("WOODEN_")) return 2;
+        if (n.startsWith("STONE_")) return 4;
+        if (n.startsWith("COPPER_")) return 5;
+        if (n.startsWith("IRON_")) return 8;
+        if (n.startsWith("GOLDEN_")) return 9;
+        if (n.startsWith("DIAMOND_")) return 12;
+        if (n.startsWith("NETHERITE_")) return 15;
+
+        return 0;
+    }
+}
