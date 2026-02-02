@@ -3,6 +3,7 @@ package ru.dagxam.upgradeplugin.listeners;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -10,205 +11,209 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerItemHeldEvent;
+import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.Location;
+import ru.dagxam.upgradeplugin.UpgradePlugin;
+import ru.dagxam.upgradeplugin.config.PluginConfig;
+import ru.dagxam.upgradeplugin.upgrade.MaterialTier;
+import ru.dagxam.upgradeplugin.upgrade.UpgradeManager;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Ускоренная добыча для улучшенных кирок.
+ *
+ * Улучшения под нагрузкой:
+ * - не храним ссылку на Block (только Location), чтобы не держать чанки лишний раз
+ * - чистим progressMap на quit/kick/teleport/worldchange/itemchange
+ */
 public class BlockBreakListener implements Listener {
 
-    // тот же самый маркер, что и в AnvilListener
-    private static final String UPGRADED_LORE_STRING = "§b[Улучшено]";
+    private final UpgradePlugin plugin;
+    private final PluginConfig cfg;
+    private final UpgradeManager upgradeManager;
 
-    // прогресс добычи по игроку
-    private static class MiningProgress {
-        final Block block;
+    private static final class MiningProgress {
+        final World world;
+        final int x, y, z;
+        final Material blockType;
         int hits;
 
         MiningProgress(Block block) {
-            this.block = block;
+            this.world = block.getWorld();
+            Location l = block.getLocation();
+            this.x = l.getBlockX();
+            this.y = l.getBlockY();
+            this.z = l.getBlockZ();
+            this.blockType = block.getType();
             this.hits = 0;
+        }
+
+        boolean isSameBlock(Block block) {
+            if (block == null) return false;
+            Location l = block.getLocation();
+            return block.getWorld().equals(world)
+                    && l.getBlockX() == x
+                    && l.getBlockY() == y
+                    && l.getBlockZ() == z
+                    && block.getType() == blockType;
         }
     }
 
-    // player UUID -> его текущий прогресс добычи
     private final Map<UUID, MiningProgress> progressMap = new HashMap<>();
 
-    // ====== ОБРАБОТКА УСКОРЕННОЙ ДОБЫЧИ (ВАРИАНТ B) ======
+    public BlockBreakListener(UpgradePlugin plugin, PluginConfig cfg, UpgradeManager upgradeManager) {
+        this.plugin = plugin;
+        this.cfg = cfg;
+        this.upgradeManager = upgradeManager;
+    }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockDamage(BlockDamageEvent event) {
+        if (!cfg.isMiningEnabled()) return;
+
         Player player = event.getPlayer();
         Block block = event.getBlock();
-        ItemStack item = player.getInventory().getItemInMainHand();
+        ItemStack tool = player.getInventory().getItemInMainHand();
 
         // Только выживание/приключение
         if (player.getGameMode() != GameMode.SURVIVAL && player.getGameMode() != GameMode.ADVENTURE) {
-            resetProgress(player);
+            reset(player);
             return;
         }
 
         // Только кирки
-        if (!isPickaxe(item)) {
-            resetProgress(player);
+        if (!isPickaxe(tool)) {
+            reset(player);
             return;
         }
 
-        // Только улучшенные кирки
-        if (!isUpgraded(item)) {
-            resetProgress(player);
+        // Только улучшенные
+        if (!upgradeManager.isUpgraded(tool)) {
+            reset(player);
             return;
         }
 
+        MaterialTier pickTier = MaterialTier.fromMaterial(tool.getType());
         Material blockType = block.getType();
-        Material pickType = item.getType();
 
-        // Определяем нужное количество "ударов" (срабатываний BlockDamageEvent)
-        int requiredHits = getRequiredHits(pickType, blockType);
+        int requiredHits = defaultRequiredHits(blockType, pickTier);
+        requiredHits = cfg.getMiningHits(blockType, pickTier, requiredHits);
 
-        // Если этот блок для этой кирки не должен ломаться особым образом
         if (requiredHits <= 0) {
-            resetProgress(player);
+            reset(player);
             return;
         }
 
         UUID uuid = player.getUniqueId();
         MiningProgress mp = progressMap.get(uuid);
-
-        // если игрок начал новый блок — сбрасываем
-        if (mp == null || mp.block == null || !mp.block.getLocation().equals(block.getLocation())) {
+        if (mp == null || !mp.isSameBlock(block)) {
             mp = new MiningProgress(block);
             progressMap.put(uuid, mp);
         }
 
         mp.hits++;
 
-        // BEDROCK — ломаем вручную, setInstaBreak не сработает
         if (blockType == Material.BEDROCK) {
+            // BEDROCK ломаем вручную, setInstaBreak может не сработать
             if (mp.hits >= requiredHits) {
                 breakBedrock(block, player);
-                resetProgress(player);
-                event.setCancelled(true);
-            } else {
-                // не даём моментально сломать, пусть продолжает "ковырять"
-                event.setCancelled(true);
+                reset(player);
             }
+            event.setCancelled(true);
             return;
         }
 
-        // Остальные блоки — включая обсидиан и любые другие
         if (mp.hits >= requiredHits) {
-            // Разрешаем моментальный слом блока в этот тик
             event.setInstaBreak(true);
-            resetProgress(player);
+            reset(player);
         } else {
-            // Продолжаем процесс, но не даём сломать раньше времени
             event.setInstaBreak(false);
         }
     }
 
-    // Чисто на всякий случай: если блок таки сломали,
-    // а мы где-то не обнулили прогресс — почистим.
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
-        Player player = event.getPlayer();
-        resetProgress(player);
-
-        // Доп. логика дропа обсидиана/бедрока у тебя, вероятно, уже была.
-        // BEDROCK мы уже ломаем вручную в onBlockDamage,
-        // поэтому сюда с BEDROCK мы почти не попадём.
-        // OBSIDIAN — ломается нормально с дропом по ванильным правилам.
+        reset(event.getPlayer());
     }
 
-    // ====== ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ======
+    // ===== Cleanup events (важно под нагрузкой) =====
 
-    private void resetProgress(Player player) {
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        reset(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onKick(PlayerKickEvent event) {
+        reset(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        reset(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onTeleport(PlayerTeleportEvent event) {
+        reset(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onItemHeld(PlayerItemHeldEvent event) {
+        reset(event.getPlayer());
+    }
+
+    private void reset(Player player) {
         progressMap.remove(player.getUniqueId());
     }
 
     private boolean isPickaxe(ItemStack item) {
         if (item == null) return false;
-        Material type = item.getType();
-        return type == Material.WOODEN_PICKAXE
-                || type == Material.STONE_PICKAXE
-                || type == Material.IRON_PICKAXE
-                || type == Material.GOLDEN_PICKAXE
-                || type == Material.DIAMOND_PICKAXE
-                || type == Material.NETHERITE_PICKAXE
-                // на случай, если в API уже есть медная кирка:
-                || type.name().equals("COPPER_PICKAXE");
-    }
-
-    private boolean isUpgraded(ItemStack item) {
-        if (item == null) return false;
-        ItemMeta meta = item.getItemMeta();
-        if (meta == null || !meta.hasLore()) return false;
-        List<String> lore = meta.getLore();
-        if (lore == null) return false;
-        return lore.contains(UPGRADED_LORE_STRING);
+        String n = item.getType().name();
+        return n.endsWith("_PICKAXE");
     }
 
     /**
-     * Возвращает требуемое количество "ударов" (срабатываний BlockDamageEvent)
-     * для заданной комбинации кирка+блок.
-     *
-     * 0 или отрицательное — значит, не используем кастомную механику.
+     * Дефолтные значения, если в конфиге нет секции.
      */
-    private int getRequiredHits(Material pick, Material block) {
-        String pickName = pick.name();
-
-        // BEDROCK — только улучшенная НЕЗЕРИТОВАЯ кирка
+    private int defaultRequiredHits(Material block, MaterialTier pickTier) {
         if (block == Material.BEDROCK) {
-            if (pick == Material.NETHERITE_PICKAXE) {
-                return 6; // твой параметр
-            }
-            // остальные кирки бедрок не трогают
-            return 0;
+            return (pickTier == MaterialTier.NETHERITE) ? 6 : 0;
         }
-
-        // OBSIDIAN — твои значения
         if (block == Material.OBSIDIAN) {
-            if (pick == Material.WOODEN_PICKAXE)      return 12;
-            if (pick == Material.STONE_PICKAXE)       return 10;
-            if (pickName.equals("COPPER_PICKAXE"))    return 9;
-            if (pick == Material.IRON_PICKAXE)        return 8;
-            if (pick == Material.GOLDEN_PICKAXE)      return 7;
-            if (pick == Material.DIAMOND_PICKAXE)     return 5;
-            if (pick == Material.NETHERITE_PICKAXE)   return 3;
-            return 0;
+            return switch (pickTier) {
+                case WOODEN -> 12;
+                case STONE -> 10;
+                case COPPER -> 9;
+                case IRON -> 8;
+                case GOLDEN -> 7;
+                case DIAMOND -> 5;
+                case NETHERITE -> 3;
+                default -> 0;
+            };
         }
-
-        // Остальные блоки — ускоренная добыча:
-        // WOODEN: 6
-        // STONE:  5
-        // COPPER: 4
-        // IRON:   3
-        // GOLDEN: 3
-        // DIAMOND:2
-        // NETHERITE:2
-
-        if (pick == Material.WOODEN_PICKAXE)          return 6;
-        if (pick == Material.STONE_PICKAXE)           return 5;
-        if (pickName.equals("COPPER_PICKAXE"))        return 4;
-        if (pick == Material.IRON_PICKAXE)            return 3;
-        if (pick == Material.GOLDEN_PICKAXE)          return 3;
-        if (pick == Material.DIAMOND_PICKAXE)         return 2;
-        if (pick == Material.NETHERITE_PICKAXE)       return 2;
-
-        return 0;
+        return switch (pickTier) {
+            case WOODEN -> 6;
+            case STONE -> 5;
+            case COPPER -> 4;
+            case IRON, GOLDEN -> 3;
+            case DIAMOND, NETHERITE -> 2;
+            default -> 0;
+        };
     }
 
     private void breakBedrock(Block block, Player player) {
         Location loc = block.getLocation();
         block.setType(Material.AIR);
-        // дропаем бедрок как предмет
-        ItemStack drop = new ItemStack(Material.BEDROCK, 1);
-        block.getWorld().dropItemNaturally(loc, drop);
+        block.getWorld().dropItemNaturally(loc, new ItemStack(Material.BEDROCK, 1));
         block.getWorld().playSound(loc, Sound.BLOCK_STONE_BREAK, 1.0f, 0.8f);
     }
 }
