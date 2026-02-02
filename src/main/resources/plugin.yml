@@ -1,17 +1,23 @@
 name: UpgradePlugin
-version: 1.0
+version: 1.1
 author: dagxam
 main: ru.dagxam.upgradeplugin.UpgradePlugin
 api-version: '1.21'
 
 commands:
+  upgrade:
+    description: Основная команда плагина (выдача книги / перезагрузка конфига).
+    usage: /<command> <give|reload>
+    aliases: [upg, upgr]
   giveupgradebook:
-    description: Выдает Книгу Улучшения.
-    # ИЗМЕНЕНО: Обновляем usage
+    description: Выдает Книгу Улучшения (совместимость со старой командой).
     usage: /<command> <имя> <количество>
     permission: upgradeplugin.givebook
 
 permissions:
   upgradeplugin.givebook:
-    description: Дает право на использование команды /giveupgradebook.
+    description: Дает право выдавать книги улучшения.
+    default: op
+  upgradeplugin.reload:
+    description: Дает право на /upgrade reload.
     default: op
