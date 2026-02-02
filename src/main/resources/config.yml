@@ -1,0 +1,91 @@
+book:
+  name: "&bКнига Улучшения"
+  lore:
+    - "&7Используйте на наковальне"
+    - "&7вместе с предметом для его"
+    - "&7улучшения."
+
+markers:
+  lore_upgraded: "&b[Улучшено]"
+
+anvil:
+  repair_cost: 20
+
+villager:
+  trade_chance_percent: 50
+  emerald_cost: 20
+  max_uses: 3
+  xp: 15
+  price_multiplier: 0.05
+
+upgrades:
+  armor:
+    LEATHER:
+      protection: 3
+      unbreaking: 2
+      thorns: 0
+    CHAINMAIL:
+      protection: 3
+      unbreaking: 3
+      thorns: 0
+    COPPER:
+      protection: 4
+      unbreaking: 3
+      thorns: 0
+    IRON:
+      protection: 4
+      unbreaking: 3
+      thorns: 0
+    GOLDEN:
+      protection: 4
+      unbreaking: 4
+      thorns: 0
+    DIAMOND:
+      protection: 5
+      unbreaking: 4
+      thorns: 0
+    NETHERITE:
+      protection: 6
+      unbreaking: 5
+      thorns: 3
+
+  tool:
+    efficiency: 10
+    unbreaking: 5
+
+  weapon:
+    sharpness: 6
+    unbreaking: 5
+
+  # Бонус к урону и скорости атаки (добавляется к ванильному базовому значению)
+  combat_bonus:
+    WOODEN: 2
+    STONE: 4
+    COPPER: 5
+    IRON: 8
+    GOLDEN: 9
+    DIAMOND: 12
+    NETHERITE: 15
+
+mining:
+  enabled: true
+  # required hits per block per tier; если блока нет — используется mining.hits.OTHER
+  hits:
+    BEDROCK:
+      NETHERITE: 6
+    OBSIDIAN:
+      WOODEN: 12
+      STONE: 10
+      COPPER: 9
+      IRON: 8
+      GOLDEN: 7
+      DIAMOND: 5
+      NETHERITE: 3
+    OTHER:
+      WOODEN: 6
+      STONE: 5
+      COPPER: 4
+      IRON: 3
+      GOLDEN: 3
+      DIAMOND: 2
+      NETHERITE: 2
