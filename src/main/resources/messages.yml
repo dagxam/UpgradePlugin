@@ -1,0 +1,17 @@
+# Все сообщения плагина. Можно менять без перекомпиляции: /upgrade reload
+errors:
+  no_permission: "&cУ вас нет прав."
+  player_not_found: "&cИгрок '{player}' не найден или не в сети."
+  invalid_number: "&c'{value}' не является допустимым числом."
+  amount_min: "&cКоличество должно быть 1 или больше."
+
+commands:
+  givebook:
+    usage: "&cИспользование: /{label} <имя> <количество>"
+    received: "&aВы получили {amount} Книг(у) Улучшения!"
+    given: "&aВы выдали {amount} Книг(у) Улучшения игроку {player}."
+  upgrade:
+    usage: "&eИспользование: /upgrade <give|reload>"
+    give_usage: "&cИспользование: /upgrade give <игрок> [количество]"
+    reload_ok: "&aКонфиг перезагружен."
+    reload_fail: "&cОшибка перезагрузки конфига. Смотрите консоль."
