@@ -1,5 +1,5 @@
 name: UpgradePlugin
-version: 1.1
+version: ${project.version}
 author: dagxam
 main: ru.dagxam.upgradeplugin.UpgradePlugin
 api-version: '1.21'
