@@ -181,6 +181,27 @@ public class UpgradeManager {
         return true;
     }
 
+    private AttributeModifier createHandModifier(String name, double amount) {
+        // Paper/Bukkit API менялся: где-то используется EquipmentSlot, где-то EquipmentSlotGroup.
+        // Делаем совместимость через рефлексию, чтобы проект собирался на разных версиях.
+        try {
+            Class<?> groupClass = Class.forName("org.bukkit.inventory.EquipmentSlotGroup");
+            Object mainHand = groupClass.getField("MAINHAND").get(null);
+            return (AttributeModifier) AttributeModifier.class
+                    .getConstructor(UUID.class, String.class, double.class, AttributeModifier.Operation.class, groupClass)
+                    .newInstance(UUID.randomUUID(), name, amount, AttributeModifier.Operation.ADD_NUMBER, mainHand);
+        } catch (Throwable ignored) {
+            // старое API
+            return new AttributeModifier(
+                    UUID.randomUUID(),
+                    name,
+                    amount,
+                    AttributeModifier.Operation.ADD_NUMBER,
+                    EquipmentSlot.HAND
+            );
+        }
+    }
+
     private void applyCombatBonus(ItemMeta meta, org.bukkit.Material type) {
         MaterialTier tier = MaterialTier.fromMaterial(type);
         double bonus = cfg.getCombatBonus(tier);
@@ -200,20 +221,7 @@ public class UpgradeManager {
         meta.removeAttributeModifier(Attribute.ATTACK_DAMAGE);
         meta.removeAttributeModifier(Attribute.ATTACK_SPEED);
 
-        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(
-                UUID.randomUUID(),
-                "upgrade_dmg",
-                dmgModValue,
-                AttributeModifier.Operation.ADD_NUMBER,
-                EquipmentSlot.HAND
-        ));
-
-        meta.addAttributeModifier(Attribute.ATTACK_SPEED, new AttributeModifier(
-                UUID.randomUUID(),
-                "upgrade_speed",
-                spdModValue,
-                AttributeModifier.Operation.ADD_NUMBER,
-                EquipmentSlot.HAND
-        ));
+        meta.addAttributeModifier(Attribute.ATTACK_DAMAGE, createHandModifier("upgrade_dmg", dmgModValue));
+        meta.addAttributeModifier(Attribute.ATTACK_SPEED, createHandModifier("upgrade_speed", spdModValue));
     }
 }
