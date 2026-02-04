@@ -34,7 +34,8 @@ public class GiveBookCommand implements CommandExecutor, TabCompleter {
         }
 
         if (args.length != 2) {
-            sender.sendMessage(messages.get("commands.givebook.usage", "&cИспользование: /" + label + " <имя> <количество>"));
+            sender.sendMessage(messages.get("commands.givebook.usage", "&cИспользование: /" + label + " <имя> <количество>")
+                    .replace("{label}", label));
             return true;
         }
 
