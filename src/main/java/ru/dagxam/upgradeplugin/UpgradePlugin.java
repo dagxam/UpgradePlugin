@@ -1,11 +1,17 @@
 package ru.dagxam.upgradeplugin;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.dagxam.upgradeplugin.commands.GiveBookCommand;
 import ru.dagxam.upgradeplugin.commands.UpgradeCommand;
 import ru.dagxam.upgradeplugin.config.Messages;
 import ru.dagxam.upgradeplugin.config.PluginConfig;
 import ru.dagxam.upgradeplugin.listeners.AnvilListener;
+import ru.dagxam.upgradeplugin.listeners.ArmorEffectsTask;
 import ru.dagxam.upgradeplugin.listeners.BlockBreakListener;
 import ru.dagxam.upgradeplugin.listeners.VillagerListener;
 import ru.dagxam.upgradeplugin.upgrade.UpgradeManager;
@@ -43,10 +49,18 @@ public final class UpgradePlugin extends JavaPlugin {
             getLogger().severe("Команда upgrade не найдена в plugin.yml");
         }
 
+        // Рецепт книги апгрейда: верхняя строка A B L, остальные пустые
+        // A = DIAMOND, B = BOOK, L = LAPIS_LAZULI
+        registerUpgradeBookRecipe();
+
         // Слушатели
         getServer().getPluginManager().registerEvents(new AnvilListener(this, upgradeManager), this);
         getServer().getPluginManager().registerEvents(new VillagerListener(this, pluginConfig, upgradeManager), this);
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this, pluginConfig, upgradeManager), this);
+
+        // Эффекты от улучшенной брони (алмаз/незерит)
+        // Обновляем эффекты раз в 2 секунды, чтобы после снятия брони они пропадали сами.
+        Bukkit.getScheduler().runTaskTimer(this, new ArmorEffectsTask(this, upgradeManager), 20L, 40L);
 
         getLogger().info("UpgradePlugin успешно включен!");
     }
@@ -54,6 +68,28 @@ public final class UpgradePlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("UpgradePlugin выключен.");
+    }
+
+    private void registerUpgradeBookRecipe() {
+        ItemStack result = upgradeManager.createUpgradeBook();
+
+        NamespacedKey key = new NamespacedKey(this, "upgrade_book_recipe");
+        ShapedRecipe recipe = new ShapedRecipe(key, result);
+
+        // A B L
+        // _ _ _
+        // _ _ _
+        recipe.shape(
+                "ABL",
+                "   ",
+                "   "
+        );
+
+        recipe.setIngredient('A', Material.DIAMOND);
+        recipe.setIngredient('B', Material.BOOK);
+        recipe.setIngredient('L', Material.LAPIS_LAZULI);
+
+        Bukkit.addRecipe(recipe);
     }
 
     /**
